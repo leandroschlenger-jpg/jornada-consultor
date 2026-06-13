@@ -446,7 +446,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
 
     <!-- REGISTER -->
     <div class="auth-screen" id="auth-register">
-      <div class="auth-err" id="register-err"></div>
+      <div class="auth-err" id="reg-err"></div>
       <div class="field">
         <label>Nome completo</label>
         <input type="text" id="reg-name" placeholder="Seu nome">
@@ -466,7 +466,11 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       </div>
       <div class="field">
         <label>Confirmar senha</label>
-        <input type="password" id="reg-pass2" placeholder="Repita a senha"
+        <input type="password" id="reg-pass2" placeholder="Repita a senha">
+      </div>
+      <div class="field">
+        <label>Código de acesso</label>
+        <input type="text" id="reg-code" placeholder="Código do dia (DDMMAAAA)"
           onkeydown="if(event.key==='Enter')doRegister()">
       </div>
       <button class="btn btn-primary btn-full" onclick="doRegister()">Criar conta</button>
