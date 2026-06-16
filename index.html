@@ -8314,7 +8314,7 @@ function renderEmpresasDashStats() {
     var cfg = liaGetConfig();
     if (!cfg.senha) { alert('Configure a senha da LIA em Inteligencia > Configurar API'); return; }
     var tipo = LIA_TIPO_MAP[declId];
-    if (!tipo) { alert('Tipo nao suportado pela LIA: ' + declId); return; }
+    if (!tipo) { console.warn('LIA: tipo nao suportado, ignorando:', declId); return; }
     // Calcular competencias
     var compIni, compFim;
     if (compIniOverride && compFimOverride) {
@@ -8382,6 +8382,7 @@ function renderEmpresasDashStats() {
   }
 
   function _liaRowHtml(empIdx, declId, periodo, liaPedidos, empCnpj) {
+    if (declId !== 'esocial' && !LIA_TIPO_MAP[declId]) return '';
     var cnpj14 = (empCnpj || '').replace(/\D/g, '');
     var key = cnpj14 + '_' + declId + '_' + periodo;
     var lp = liaPedidos[key] || null;
