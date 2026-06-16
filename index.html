@@ -554,6 +554,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
         <div style="font-size:.7rem;color:var(--text3)" id="nav-user-cargo"></div>
       </div>
       <div class="nav-avatar" id="nav-avatar" onclick="openProfileModal()"></div>
+      <span id="nav-version" style="font-size:.6rem;color:var(--text3);white-space:nowrap;margin-left:.25rem;opacity:.7" title="Versão do sistema"></span>
     </div>
   </nav>
 
@@ -922,6 +923,10 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
 
   </main>
 
+  <!-- RODAPÉ -->
+  <footer id="app-footer" style="text-align:center;padding:.6rem 1rem;font-size:.68rem;color:var(--text3);border-top:1px solid var(--border);background:var(--surface);margin-top:auto">
+    Jornada do Consultor &nbsp;·&nbsp; <span id="footer-version"></span> &nbsp;·&nbsp; build <span id="footer-build"></span>
+  </footer>
 
     <!-- ─── PROJECT MODAL ─── -->
     <div class="modal-overlay" id="proj-modal-overlay" onclick="if(event.target===this)closeProjectModal()">
@@ -1425,6 +1430,12 @@ const ACHIEVEMENTS=[
 ];
 
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// VERSÃO
+// ─────────────────────────────────────────────
+const APP_VERSION = '1.4.0';
+const APP_BUILD   = '2026-06-16';
+
 // STORAGE HELPERS
 // ─────────────────────────────────────────────
 function ls(k,def){try{const v=localStorage.getItem(k);return v===null?def:JSON.parse(v)}catch{return def}}
@@ -5417,6 +5428,13 @@ function startApp() {
     if (sess.photo) avEl.innerHTML = '<img src="' + sess.photo + '">';
     else avEl.textContent = sess.name.charAt(0).toUpperCase();
   }
+  // Versão
+  const verEl = document.getElementById('nav-version');
+  if (verEl) verEl.textContent = 'v' + APP_VERSION;
+  var fv = document.getElementById('footer-version');
+  var fb = document.getElementById('footer-build');
+  if (fv) fv.textContent = 'v' + APP_VERSION;
+  if (fb) fb.textContent = APP_BUILD;
   // Admin nav
   const adminBtn = document.getElementById('nav-admin');
   if (adminBtn) adminBtn.classList.toggle('hidden', !sess.admin);
@@ -7835,7 +7853,7 @@ function empSalvar() {
     renderEmpresas();
     const novoIdx = getEmpresas().length - 1;
     if (confirm('Empresa cadastrada! Deseja solicitar o download de todos os arquivos LIA disponíveis agora?\n\n(EFD ICMS/IPI, EFD Contribuições, ECD, ECF de todo o período prescricional)')) {
-      liaSolicitarTodosEmpresa(novoIdx);
+      liaSolicitarTodosEmpresa(novoIdx).then(function() { empAbrirChecklist(novoIdx); });
     }
     return;
   }
@@ -8003,8 +8021,9 @@ function empCard(e, i) {
     </div>` : ''}
 
     <!-- Actions -->
-    <div style="display:flex;gap:.5rem;margin-top:.25rem">
+    <div style="display:flex;gap:.5rem;margin-top:.25rem;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" style="flex:1" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
+      <button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;font-size:.75rem;padding:.35rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap" onclick="empBaixarTodos(${i})" title="Solicitar download LIA de todos os períodos pendentes">📥 Baixar LIA</button>
     </div>
   </div>`;
 }
@@ -8392,6 +8411,9 @@ function renderEmpresasDashStats() {
     if (st !== 'CONCLUIDO') {
       html += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + cor + ';color:' + cor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
     }
+    if (st === 'CONCLUIDO' && lp.pedido_id) {
+      html += ' <button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\')" title="Salvar arquivo no computador" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">⬇️ Salvar</button>';
+    }
     if (st === 'ERRO') {
       html += ' <button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
     }
@@ -8423,6 +8445,12 @@ function renderEmpresasDashStats() {
     h += '<input id="lia-cfg-user" value="' + (cfg.usuario || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
     h += '<div style="grid-column:1/-1"><label style="font-size:.73rem;color:#64748b">Senha</label><br>';
     h += '<input id="lia-cfg-senha" type="password" value="' + (cfg.senha || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '<div style="grid-column:1/-1"><label style="font-size:.73rem;color:#64748b">Pasta de destino <span style="font-weight:400;color:#94a3b8">(opcional — onde salvar os arquivos baixados no seu computador)</span></label><br>';
+    h += '<div style="display:flex;gap:.35rem;margin-top:.15rem">';
+    h += '<input id="lia-cfg-pasta" value="' + esc(cfg.pasta_local || '') + '" placeholder="Ex: C:\\SPED\\Clientes  (deixe vazio para nao salvar localmente)" style="flex:1;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box">';
+    h += '</div>';
+    h += '<p style="font-size:.7rem;color:#94a3b8;margin:.25rem 0 0">Os arquivos ficam sempre disponiveis no servidor. Informe uma pasta apenas se quiser copia local automatica a cada download.</p>';
+    h += '</div>';
     h += '</div>';
     h += '<div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">';
     h += '<button onclick="_liaSaveCfg()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer;font-weight:700">💾 Salvar</button>';
@@ -8464,6 +8492,9 @@ function renderEmpresasDashStats() {
         h += '<span style="font-size:.7rem;color:#64748b">' + per + '</span>';
         if (pv.protocolo) h += '<span style="font-size:.67rem;color:#94a3b8">#' + pv.protocolo + '</span>';
         h += '<span style="font-size:.7rem;font-weight:700;color:' + cor + '">' + ic + ' ' + st + '</span>';
+        if (st === 'CONCLUIDO' && pv.pedido_id) {
+          h += ' <button onclick="liaDownloadArquivo(\'' + pv.pedido_id + '\')" title="Baixar arquivo" style="background:#10b981;color:#fff;border:none;border-radius:5px;padding:.15rem .5rem;font-size:.68rem;cursor:pointer;font-weight:700">⬇️</button>';
+        }
         h += '</div>';
       });
       h += '</div>';
@@ -8485,10 +8516,34 @@ function renderEmpresasDashStats() {
     var url = (document.getElementById('lia-cfg-url') || {}).value || '';
     var usuario = (document.getElementById('lia-cfg-user') || {}).value || '';
     var senha = (document.getElementById('lia-cfg-senha') || {}).value || '';
-    liaSaveConfig({url: url.replace(/\/+$/, ''), usuario: usuario, senha: senha});
+    var pasta = ((document.getElementById('lia-cfg-pasta') || {}).value || '').trim();
+    liaSaveConfig({url: url.replace(/\/+$/, ''), usuario: usuario, senha: senha, pasta_local: pasta});
     _liaToken = null; _liaTokenExp = 0;
     var r = document.getElementById('lia-test-result');
     if (r) { r.style.color = '#10b981'; r.textContent = '✅ Salvo!'; setTimeout(function(){ r.textContent = ''; }, 2000); }
+  }
+
+  async function liaDownloadArquivo(pedidoId) {
+    var cfg = liaGetConfig();
+    try {
+      var token = await liaGetToken();
+      var r = await fetch(cfg.url + '/api/v1/pedidos/' + pedidoId + '/arquivo', {
+        headers: {'Authorization': 'Bearer ' + token}
+      });
+      if (!r.ok) throw new Error('Arquivo nao disponivel (status ' + r.status + '). Verifique se o pedido foi concluido no servidor.');
+      var blob = await r.blob();
+      var cd = r.headers.get('content-disposition') || '';
+      var fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      var filename = fnMatch ? fnMatch[1].replace(/['"]/g, '') : ('sped_' + pedidoId + '.txt');
+      var pasta = cfg.pasta_local ? cfg.pasta_local.split(/[/\\]/).pop() : '';
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+      showToast('Arquivo baixado: ' + filename, '#10b981');
+    } catch(e) {
+      alert('Erro ao baixar arquivo: ' + e.message);
+    }
   }
 
   async function _liaTestConn() {
@@ -8501,6 +8556,17 @@ function renderEmpresasDashStats() {
     } catch(e) {
       if (r) { r.style.color = '#ef4444'; r.textContent = '❌ ' + e.message; }
     }
+  }
+
+  async function empBaixarTodos(empIdx) {
+    const cfg = liaGetConfig();
+    if (!cfg.senha) {
+      if (confirm('Configure a senha da LIA primeiro.\nAbre Inteligencia > Configurar API LIA agora?')) navTo('inteligencia', null);
+      return;
+    }
+    if (!confirm('Solicitar download LIA de todos os periodos pendentes desta empresa?')) return;
+    await liaSolicitarTodosEmpresa(empIdx);
+    empAbrirChecklist(empIdx);
   }
 
   async function liaSolicitarTodosEmpresa(empIdx) {
