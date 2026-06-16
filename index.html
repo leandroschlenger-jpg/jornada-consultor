@@ -1492,7 +1492,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.5.1';
+const APP_VERSION = '1.5.3';
 const APP_BUILD   = '2026-06-16';
 
 // STORAGE HELPERS
@@ -8166,16 +8166,28 @@ function empRenderChecklist() {
   }
 
   const cl = emp.checklist || {};
-  const toolbar = `<div style="display:flex;justify-content:flex-end;align-items:center;gap:.6rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
-    <span style="font-size:.72rem;color:var(--text3)">Exporte o relatório completo de obrigações desta empresa</span>
+  const cnpj14cl = (emp.cnpj || '').replace(/\D/g, '');
+  const allLiaPedidos = ls('jdc_lia_pedidos', {});
+
+  const toolbar = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);flex-wrap:wrap">
+    <button onclick="empAbrirLiaSelect(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
+    <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>
+    <div style="flex:1"></div>
     <button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>
   </div>`;
+
   el.innerHTML = toolbar + decls.map(d => {
-    const periods = empGetPeriods(d);
+    const allPeriods = empGetPeriods(d);
+    const isLia = (d.controle || 'lia') === 'lia';
+    // Para LIA: mostra só os períodos já solicitados; para manual: todos
+    const periods = (isLia && LIA_TIPO_MAP[d.id])
+      ? allPeriods.filter(p => allLiaPedidos[cnpj14cl + '_' + d.id + '_' + p])
+      : allPeriods;
+
     if (d.semPeriodo) return `<div style="margin-bottom:1.25rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
         <span style="font-weight:700;font-size:.875rem">${d.icon||'📄'} ${esc(d.label)}</span>
-        <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:${(d.controle||'lia')==='lia'?'var(--primary-l,#eef2ff)':'#f1f5f9'};color:${(d.controle||'lia')==='lia'?'var(--primary)':'#64748b'}">${(d.controle||'lia')==='lia'?'🤖 LIA':'👤 Manual'}</span>
+        <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:${isLia?'var(--primary-l,#eef2ff)':'#f1f5f9'};color:${isLia?'var(--primary)':'#64748b'}">${isLia?'🤖 LIA':'👤 Manual'}</span>
       </div>
       <div style="font-size:.78rem;color:var(--text3)">Sem controle por período — verificação única</div>
       <div style="display:flex;gap:.75rem;margin-top:.4rem">
@@ -8187,18 +8199,29 @@ function empRenderChecklist() {
         </label>
       </div>
     </div>`;
-    if (!periods.length) return `<div style="margin-bottom:1.25rem">
+
+    if (!allPeriods.length) return `<div style="margin-bottom:1.25rem">
       <div style="font-weight:700;font-size:.875rem;margin-bottom:.5rem">${d.icon||'📄'} ${esc(d.label)}</div>
       <div style="font-size:.78rem;color:var(--text3)">Período não configurado — edite a empresa para definir datas.</div>
+    </div>`;
+
+    // LIA sem nenhum pedido ainda
+    if (isLia && LIA_TIPO_MAP[d.id] && !periods.length) return `<div style="margin-bottom:1.25rem">
+      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem">
+        <div style="font-weight:700;font-size:.875rem">${d.icon||'📄'} ${esc(d.label)}</div>
+        <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:var(--primary-l,#eef2ff);color:var(--primary)">🤖 LIA</span>
+      </div>
+      <div style="font-size:.78rem;color:var(--text3);padding:.6rem .75rem;background:var(--bg);border:1px dashed var(--border);border-radius:8px">
+        Nenhuma solicitação feita ainda. Use <strong>📥 Solicitar</strong> acima para escolher os períodos.
+      </div>
     </div>`;
 
     const dCl = cl[d.id] || {};
     const done = periods.filter(p => dCl[p] && dCl[p].baixado).length;
     const conf = periods.filter(p => dCl[p] && dCl[p].conferido).length;
-    const isLia = (d.controle || 'lia') === 'lia';
     const isAnual = d.id === 'ecd' || d.id === 'ecf';
     const temPrazo = d.id === 'ecd' || d.id === 'ecf' || d.id === 'efd_contrib' || d.id === 'efd_icms';
-    const liaPedidos = isLia ? ls('jdc_lia_pedidos', {}) : {};
+    const liaPedidos = isLia ? allLiaPedidos : {};
 
     return `<div style="margin-bottom:1.5rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
@@ -8206,8 +8229,8 @@ function empRenderChecklist() {
         <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:${isLia?'var(--primary-l,#eef2ff)':'#f1f5f9'};color:${isLia?'var(--primary)':'#64748b'}">${isLia?'🤖 LIA':'👤 Manual'}</span>
         ${isAnual ? '<span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:700">📅 Anual</span>' : ''}
         <span style="font-size:.72rem;color:var(--text3)">${d.inicio} → ${d.fim}</span>
-        <span style="font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:99px;background:${done===periods.length?'#dcfce7':'var(--bg)'};color:${done===periods.length?'#16a34a':'var(--text3)'}">
-          ${done}/${periods.length} baixados · ${conf} conferidos
+        <span style="font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:99px;background:${done===periods.length&&periods.length?'#dcfce7':'var(--bg)'};color:${done===periods.length&&periods.length?'#16a34a':'var(--text3)'}">
+          ${periods.length} solicitado(s) · ${done} baixado(s) · ${conf} conferido(s)
         </span>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(${isAnual?'270px':'220px'},1fr));gap:.4rem">
@@ -8247,6 +8270,23 @@ function empToggleCl(empIdx, declId, periodo, field, value) {
   saveEmpresas(emps);
   // Update the card in background
   renderEmpresas();
+}
+
+function empLimparPedidos(empIdx) {
+  const emps = getEmpresas();
+  const emp = emps[empIdx];
+  if (!emp) return;
+  const cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+  const pedidos = ls('jdc_lia_pedidos', {});
+  const keys = Object.keys(pedidos).filter(k => k.startsWith(cnpj14 + '_'));
+  if (!keys.length) { showToast('Nenhuma solicitação para limpar.', '#64748b'); return; }
+  if (!confirm('Remover ' + keys.length + ' registro(s) de solicitação LIA desta empresa?\n\nOs arquivos já baixados no servidor não são afetados.')) return;
+  keys.forEach(k => delete pedidos[k]);
+  lsSave('jdc_lia_pedidos', pedidos);
+  empRenderChecklist();
+  liaDownloadBarUpdate();
+  renderEmpresas();
+  showToast(keys.length + ' solicitação(ões) removida(s).', '#64748b');
 }
 
 function empExportarChecklist(empIdx) {
@@ -8589,19 +8629,36 @@ function renderEmpresasDashStats() {
       return '<button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .55rem;font-size:.68rem;cursor:pointer;white-space:nowrap;font-weight:700">📥 Solicitar</button>';
     }
     var st = lp.status || 'PENDENTE';
-    var cores = {PENDENTE:'#6b7280',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b',CONCLUIDO:'#10b981',ERRO:'#ef4444'};
-    var ics = {PENDENTE:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥',CONCLUIDO:'✅',ERRO:'❌'};
+
+    // Para ERRO: adapta a mensagem ao contexto do prazo
+    if (st === 'ERRO') {
+      var _PRAZO_DECLS = ['ecd','ecf','efd_contrib','efd_icms'];
+      var _temPrazo = _PRAZO_DECLS.indexOf(declId) !== -1;
+      var _prazoVenceu = !_temPrazo || empDeadlinePassou(declId, periodo);
+      var _erroLabel, _erroCor, _erroIc;
+      if (!_prazoVenceu) {
+        // Dentro do prazo — empresa ainda não entregou, normal
+        _erroLabel = 'Em prazo'; _erroCor = '#d97706'; _erroIc = '⏰';
+      } else {
+        // Prazo passou — SPED não encontrado na Receita Federal
+        _erroLabel = 'Não entregue'; _erroCor = '#ea580c'; _erroIc = '📭';
+      }
+      var _erroHtml = '<span style="font-size:.68rem;font-weight:700;color:' + _erroCor + ';white-space:nowrap" title="ReceitaNetBX não encontrou este arquivo na Receita Federal">' + _erroIc + ' ' + _erroLabel + '</span>';
+      _erroHtml += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + _erroCor + ';color:' + _erroCor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
+      _erroHtml += ' <button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:' + _erroCor + ';color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
+      return _erroHtml;
+    }
+
+    var cores = {PENDENTE:'#6b7280',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b',CONCLUIDO:'#10b981'};
+    var ics   = {PENDENTE:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥',CONCLUIDO:'✅'};
     var cor = cores[st] || '#6b7280';
-    var ic = ics[st] || '⏳';
+    var ic  = ics[st]  || '⏳';
     var html = '<span style="font-size:.68rem;font-weight:700;color:' + cor + ';white-space:nowrap">' + ic + ' ' + st + '</span>';
     if (st !== 'CONCLUIDO') {
       html += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + cor + ';color:' + cor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
     }
     if (st === 'CONCLUIDO' && lp.pedido_id) {
       html += ' <button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\',' + empIdx + ')" title="Salvar arquivo no computador" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">⬇️ Salvar</button>';
-    }
-    if (st === 'ERRO') {
-      html += ' <button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
     }
     return html;
   }
