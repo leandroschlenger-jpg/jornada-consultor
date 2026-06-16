@@ -1492,7 +1492,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.5.4';
 const APP_BUILD   = '2026-06-16';
 
 // STORAGE HELPERS
@@ -8577,7 +8577,21 @@ function renderEmpresasDashStats() {
       empRenderChecklist();
     } catch(e) {
       if (btn) { btn.disabled = false; btn.textContent = 'Solicitar'; }
-      alert('Erro ao solicitar: ' + e.message);
+      throw e; // deixa o chamador tratar
+    }
+  }
+
+  // Wrapper para botões individuais no checklist (trata o erro sem quebrar)
+  async function liaSolicitarUI(empIdx, declId, periodo) {
+    try {
+      await liaSolicitar(empIdx, declId, periodo);
+    } catch(e) {
+      var msg = e.message || String(e);
+      if (msg.includes('fetch') || msg.includes('network') || msg.includes('Failed')) {
+        showToast('❌ Servidor inacessível — verifique a VM', '#ef4444');
+      } else {
+        showToast('❌ Erro: ' + msg, '#ef4444');
+      }
     }
   }
 
@@ -8626,7 +8640,7 @@ function renderEmpresasDashStats() {
           '<button id="' + btnId + '" onclick="liaSolicitarEsocial(' + empIdx + ',\'' + periodo + '\',\'' + diIniId + '\',\'' + diFimId + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .45rem;font-size:.68rem;cursor:pointer;font-weight:700">📥</button>' +
           '</div>';
       }
-      return '<button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .55rem;font-size:.68rem;cursor:pointer;white-space:nowrap;font-weight:700">📥 Solicitar</button>';
+      return '<button id="' + btnId + '" onclick="liaSolicitarUI(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .55rem;font-size:.68rem;cursor:pointer;white-space:nowrap;font-weight:700">📥 Solicitar</button>';
     }
     var st = lp.status || 'PENDENTE';
 
@@ -8645,7 +8659,7 @@ function renderEmpresasDashStats() {
       }
       var _erroHtml = '<span style="font-size:.68rem;font-weight:700;color:' + _erroCor + ';white-space:nowrap" title="ReceitaNetBX não encontrou este arquivo na Receita Federal">' + _erroIc + ' ' + _erroLabel + '</span>';
       _erroHtml += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + _erroCor + ';color:' + _erroCor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
-      _erroHtml += ' <button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:' + _erroCor + ';color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
+      _erroHtml += ' <button id="' + btnId + '" onclick="liaSolicitarUI(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:' + _erroCor + ';color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
       return _erroHtml;
     }
 
@@ -8945,10 +8959,10 @@ function renderEmpresasDashStats() {
     document.getElementById('lia-select-modal').style.display = 'none';
     empAbrirChecklist(_liaSelectEmpIdx);
 
-    var cnt = 0; var errs = 0;
+    var cnt = 0; var errs = 0; var abortado = false;
     var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
     var declIds = Object.keys(allPeriods);
-    for (var i = 0; i < declIds.length; i++) {
+    outer: for (var i = 0; i < declIds.length; i++) {
       var declId = declIds[i];
       var periods = allPeriods[declId];
       for (var j = 0; j < periods.length; j++) {
@@ -8956,11 +8970,27 @@ function renderEmpresasDashStats() {
         var key = cnpj14 + '_' + declId + '_' + p;
         var existing = ls('jdc_lia_pedidos', {});
         if (!existing[key] || existing[key].status === 'ERRO') {
-          try { await liaSolicitar(_liaSelectEmpIdx, declId, p); cnt++; } catch(e) { errs++; console.warn('liaSelect:', e); }
+          try {
+            await liaSolicitar(_liaSelectEmpIdx, declId, p);
+            cnt++;
+          } catch(e) {
+            var msg = e.message || String(e);
+            // Erro de rede: para o lote inteiro, avisa uma vez
+            if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')) {
+              abortado = true;
+              break outer;
+            }
+            errs++;
+            console.warn('liaSelect:', msg);
+          }
         }
       }
     }
-    showToast(cnt + ' pedido(s) enviados' + (errs ? ' (' + errs + ' erro(s))' : '') + '!', cnt ? '#10b981' : '#ef4444');
+    if (abortado) {
+      showToast('❌ Servidor inacessível (' + cnt + ' enviado(s) antes da falha). Verifique a VM e tente novamente.', '#ef4444');
+    } else {
+      showToast(cnt + ' pedido(s) enviados' + (errs ? ' · ' + errs + ' erro(s)' : '') + '!', cnt ? '#10b981' : '#ef4444');
+    }
     liaDownloadBarShow();
     empRenderChecklist();
   }
