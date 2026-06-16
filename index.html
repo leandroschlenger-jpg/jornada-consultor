@@ -1438,7 +1438,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 const APP_BUILD   = '2026-06-16';
 
 // STORAGE HELPERS
@@ -8078,7 +8078,11 @@ function empRenderChecklist() {
   }
 
   const cl = emp.checklist || {};
-  el.innerHTML = decls.map(d => {
+  const toolbar = `<div style="display:flex;justify-content:flex-end;align-items:center;gap:.6rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
+    <span style="font-size:.72rem;color:var(--text3)">Exporte o relatório completo de obrigações desta empresa</span>
+    <button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>
+  </div>`;
+  el.innerHTML = toolbar + decls.map(d => {
     const periods = empGetPeriods(d);
     if (d.semPeriodo) return `<div style="margin-bottom:1.25rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
@@ -8134,6 +8138,9 @@ function empRenderChecklist() {
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)">
               <input type="checkbox" ${s.conferido?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','conferido',this.checked)" style="accent-color:#10b981"> Conferido
             </label>
+            <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)" title="Marque se este arquivo é uma retificação de entrega anterior">
+              <input type="checkbox" ${s.retificador?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','retificador',this.checked)" style="accent-color:#f59e0b"> Ret.
+            </label>
             ${isLia ? _liaRowHtml(_empClIdx, d.id, p, liaPedidos, emp.cnpj) : ''}
           </div>`;
         }).join('')}
@@ -8152,6 +8159,87 @@ function empToggleCl(empIdx, declId, periodo, field, value) {
   saveEmpresas(emps);
   // Update the card in background
   renderEmpresas();
+}
+
+function empExportarChecklist(empIdx) {
+  var emps = getEmpresas();
+  var emp = emps[empIdx];
+  if (!emp) return;
+  var cl = emp.checklist || {};
+  var pedidos = ls('jdc_lia_pedidos', {});
+  var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+  var decls = (emp.declaracoes || []).filter(function(d){ return d.ativo; });
+  var TIPOS_PRAZO = ['ecd','ecf','efd_contrib','efd_icms'];
+
+  var cabecalho = ['Empresa','CNPJ','Declaração','Período','Controle','Status LIA','Protocolo','Baixado','Conferido','Prazo','Retificador','Tamanho'];
+  var linhas = [cabecalho];
+
+  decls.forEach(function(d) {
+    var dCl = cl[d.id] || {};
+    var isLia = (d.controle || 'lia') === 'lia';
+    var temPrazo = TIPOS_PRAZO.indexOf(d.id) !== -1;
+
+    if (d.semPeriodo) {
+      var s = dCl['__geral'] || {};
+      linhas.push([
+        emp.razao_social || '',
+        emp.cnpj || '',
+        d.label,
+        'Sem período',
+        isLia ? 'LIA' : 'Manual',
+        '-', '-',
+        s.baixado ? 'Sim' : 'Não',
+        s.conferido ? 'Sim' : 'Não',
+        'N/A',
+        s.retificador ? 'Sim' : 'Não',
+        'N/D'
+      ]);
+      return;
+    }
+
+    var periods = empGetPeriods(d);
+    if (!periods.length) {
+      linhas.push([emp.razao_social||'', emp.cnpj||'', d.label, '(sem período configurado)', isLia?'LIA':'Manual','-','-','-','-','-','-','-']);
+      return;
+    }
+
+    periods.forEach(function(p) {
+      var s = dCl[p] || {};
+      var key = cnpj14 + '_' + d.id + '_' + p;
+      var ped = pedidos[key] || {};
+      var prazoTxt = 'N/A';
+      if (temPrazo) prazoTxt = empDeadlinePassou(d.id, p) ? 'Vencido' : 'Dentro do prazo';
+      linhas.push([
+        emp.razao_social || '',
+        emp.cnpj || '',
+        d.label,
+        p,
+        isLia ? 'LIA' : 'Manual',
+        ped.status || '-',
+        ped.protocolo || '-',
+        s.baixado ? 'Sim' : 'Não',
+        s.conferido ? 'Sim' : 'Não',
+        prazoTxt,
+        s.retificador ? 'Sim' : 'Não',
+        'N/D'
+      ]);
+    });
+  });
+
+  // BOM UTF-8 para Excel abrir corretamente acentos; separador ponto-e-vírgula (padrão BR)
+  var csv = '﻿' + linhas.map(function(row) {
+    return row.map(function(c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(';');
+  }).join('\r\n');
+
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var dataHoje = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href = url;
+  a.download = 'checklist_' + (cnpj14 || 'empresa') + '_' + dataHoje + '.csv';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  showToast('CSV exportado com sucesso!', '#10b981');
 }
 
 // ── DASHBOARD INTEGRATION ─────────────────────────────────────────────
