@@ -2223,13 +2223,46 @@ function clearManual(key){
 // ─────────────────────────────────────────────
 // ADMIN: USERS
 // ─────────────────────────────────────────────
+async function adminCriarUsuario(){
+  const nome=document.getElementById('adm-new-name')?.value.trim();
+  const email=document.getElementById('adm-new-email')?.value.trim().toLowerCase();
+  const senha=document.getElementById('adm-new-pass')?.value;
+  const isAdm=document.getElementById('adm-new-admin')?.checked;
+  const errEl=document.getElementById('adm-new-err');
+  if(!nome||!email||!senha){if(errEl)errEl.textContent='Preencha nome, e-mail e senha.';return;}
+  const users=getUsers();
+  if(users.find(x=>x.email===email)){if(errEl)errEl.textContent='E-mail já cadastrado.';return;}
+  const hash=await sha256(senha);
+  const u={id:'u'+Date.now(),name:nome,email,hash,admin:!!isAdm,blocked:false,createdAt:new Date().toISOString()};
+  users.push(u);saveUsers(users);
+  logAction('Admin','Usuário criado pelo admin: '+nome+' <'+email+'>'+(isAdm?' (Admin)':''));
+  showToast('Usuário '+nome+' criado!','#10b981');
+  document.getElementById('adm-new-name').value='';
+  document.getElementById('adm-new-email').value='';
+  document.getElementById('adm-new-pass').value='';
+  if(errEl)errEl.textContent='';
+  renderAdminUsers();
+}
+
 function renderAdminUsers(){
   const users=getUsers();
   const sess=getSession();
   const cnt=document.getElementById('admin-user-count');
   if(cnt) cnt.textContent=users.length+' usuário(s)';
   const el=document.getElementById('admin-users-table');if(!el)return;
-  if(!users.length){el.innerHTML='<div class="admin-empty">Nenhum usuário cadastrado.</div>';return;}
+  const formHtml='<details style="background:#f8faff;border:2px solid #c7d2fe;border-radius:12px;padding:.85rem 1rem;margin-bottom:1rem" open>'+
+    '<summary style="cursor:pointer;font-weight:700;color:#1e1b4b;font-size:.88rem">➕ Criar novo usuário</summary>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-top:.75rem">'+
+    '<div><label style="font-size:.73rem;color:#64748b">Nome</label><br><input id="adm-new-name" placeholder="Nome completo" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>'+
+    '<div><label style="font-size:.73rem;color:#64748b">E-mail</label><br><input id="adm-new-email" type="email" placeholder="email@empresa.com" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>'+
+    '<div><label style="font-size:.73rem;color:#64748b">Senha</label><br><input id="adm-new-pass" type="password" placeholder="Senha inicial" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>'+
+    '<div style="display:flex;align-items:flex-end;padding-bottom:.1rem"><label style="display:flex;align-items:center;gap:.4rem;font-size:.82rem;cursor:pointer"><input id="adm-new-admin" type="checkbox"> Perfil Admin</label></div>'+
+    '</div>'+
+    '<div style="margin-top:.6rem;display:flex;align-items:center;gap:.75rem">'+
+    '<button onclick="adminCriarUsuario()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.4rem 1.1rem;font-size:.82rem;cursor:pointer;font-weight:700">✅ Criar usuário</button>'+
+    '<span id="adm-new-err" style="font-size:.78rem;color:#ef4444"></span>'+
+    '</div></details>';
+  if(!users.length){el.innerHTML=formHtml+'<div class="admin-empty">Nenhum usuário cadastrado.</div>';return;}
   const avColors=['av0','av1','av2','av3','av4'];
   el.innerHTML=`<table class="admin-table"><thead><tr>
     <th>Usuário</th><th>Cargo</th><th>Perfil</th><th>Horas/sem</th><th>Status</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>`+
@@ -2250,6 +2283,7 @@ function renderAdminUsers(){
         `:'<span style="color:#94a3b8;font-size:.78rem">Você</span>'}
       </td>
     </tr>`).join('')+'</tbody></table>';
+  el.innerHTML=formHtml+el.innerHTML;
 }
 function toggleBlockUser(uid){
   const users=getUsers();
@@ -7797,6 +7831,13 @@ function empSalvar() {
     emps.push({ ..._empCurrentData, declaracoes: decls, checklist: {}, adicionadoEm: new Date().toISOString() });
     saveEmpresas(emps);
     showToast('Empresa adicionada!', '#10b981');
+    empFecharModal();
+    renderEmpresas();
+    const novoIdx = getEmpresas().length - 1;
+    if (confirm('Empresa cadastrada! Deseja solicitar o download de todos os arquivos LIA disponíveis agora?\n\n(EFD ICMS/IPI, EFD Contribuições, ECD, ECF de todo o período prescricional)')) {
+      liaSolicitarTodosEmpresa(novoIdx);
+    }
+    return;
   }
 
   empFecharModal();
@@ -7851,6 +7892,15 @@ function renderEmpresas() {
 
 function empGetPeriods(decl) {
   if (!decl.inicio || !decl.fim) return [];
+  const isAnual = decl.id === 'ecd' || decl.id === 'ecf';
+  if (isAnual) {
+    const yI = parseInt(decl.inicio.split('/')[1] || decl.inicio) || 0;
+    const yF = parseInt(decl.fim.split('/')[1] || decl.fim) || 0;
+    if (!yI || !yF) return [];
+    const years = [];
+    for (let y = yI; y <= yF && years.length < 30; y++) years.push(String(y));
+    return years;
+  }
   const periods = [];
   try {
     let [mI, yI] = decl.inicio.split('/').map(Number);
@@ -7864,6 +7914,32 @@ function empGetPeriods(decl) {
     }
   } catch(e) {}
   return periods;
+}
+
+// Retorna true se o prazo de entrega já passou para o período
+// periodo = 'YYYY' para ECD/ECF; 'MM/YYYY' para mensais
+function empDeadlinePassou(declId, periodo) {
+  var now = new Date();
+  if (declId === 'ecd') {
+    var y = parseInt(periodo);
+    return now > new Date(y + 1, 5, 30, 23, 59, 59); // 30/06 do ano seguinte
+  }
+  if (declId === 'ecf') {
+    var y = parseInt(periodo);
+    return now > new Date(y + 1, 6, 31, 23, 59, 59); // 31/07 do ano seguinte
+  }
+  var parts = (periodo + '').split('/');
+  var mm = parseInt(parts[0]); var yyyy = parseInt(parts[1]);
+  if (!mm || !yyyy) return true;
+  if (declId === 'efd_contrib') {
+    // ~15o dia util do 2o mes seguinte — usando dia 15 como referencia
+    return now > new Date(yyyy, mm + 1, 15, 23, 59, 59);
+  }
+  if (declId === 'efd_icms') {
+    // ~dia 25 do mes seguinte (varia por estado)
+    return now > new Date(yyyy, mm, 25, 23, 59, 59);
+  }
+  return true; // esocial e outros: sem prazo especial
 }
 
 function empCard(e, i) {
@@ -8000,22 +8076,30 @@ function empRenderChecklist() {
     const done = periods.filter(p => dCl[p] && dCl[p].baixado).length;
     const conf = periods.filter(p => dCl[p] && dCl[p].conferido).length;
     const isLia = (d.controle || 'lia') === 'lia';
+    const isAnual = d.id === 'ecd' || d.id === 'ecf';
+    const temPrazo = d.id === 'ecd' || d.id === 'ecf' || d.id === 'efd_contrib' || d.id === 'efd_icms';
     const liaPedidos = isLia ? ls('jdc_lia_pedidos', {}) : {};
 
     return `<div style="margin-bottom:1.5rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
         <div style="font-weight:700;font-size:.875rem">${d.icon||'📄'} ${esc(d.label)}</div>
         <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:${isLia?'var(--primary-l,#eef2ff)':'#f1f5f9'};color:${isLia?'var(--primary)':'#64748b'}">${isLia?'🤖 LIA':'👤 Manual'}</span>
+        ${isAnual ? '<span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:700">📅 Anual</span>' : ''}
         <span style="font-size:.72rem;color:var(--text3)">${d.inicio} → ${d.fim}</span>
         <span style="font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:99px;background:${done===periods.length?'#dcfce7':'var(--bg)'};color:${done===periods.length?'#16a34a':'var(--text3)'}">
           ${done}/${periods.length} baixados · ${conf} conferidos
         </span>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.4rem">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(${isAnual?'270px':'220px'},1fr));gap:.4rem">
         ${periods.map(p => {
           const s = dCl[p] || {};
-          return `<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.5rem .75rem;display:flex;align-items:center;gap:.6rem">
-            <span style="font-size:.75rem;font-weight:600;color:var(--text2);min-width:52px">📅 ${p}</span>
+          const prazoOk = !temPrazo || empDeadlinePassou(d.id, p);
+          const rowBg = prazoOk ? 'var(--bg)' : '#f9fafb';
+          const rowBorder = prazoOk ? '1px solid var(--border)' : '1px dashed #cbd5e1';
+          const rowOp = prazoOk ? '' : 'opacity:.65;';
+          return `<div style="background:${rowBg};border:${rowBorder};border-radius:8px;padding:.5rem .75rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;${rowOp}">
+            <span style="font-size:.75rem;font-weight:600;color:var(--text2);min-width:48px">📅 ${p}</span>
+            ${temPrazo && !prazoOk ? '<span style="font-size:.62rem;background:#fef3c7;color:#92400e;padding:.1rem .35rem;border-radius:4px;white-space:nowrap">prazo pendente</span>' : ''}
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)">
               <input type="checkbox" ${s.baixado?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','baixado',this.checked)" style="accent-color:var(--primary)"> Baixado
             </label>
@@ -8194,7 +8278,17 @@ function renderEmpresasDashStats() {
     return _liaToken;
   }
 
-  async function liaSolicitar(empIdx, declId, periodo) {
+  async function liaSolicitarEsocial(empIdx, periodo, diIniId, diFimId) {
+    var diaIni = parseInt((document.getElementById(diIniId) || {}).value || 1);
+    var diaFim = parseInt((document.getElementById(diFimId) || {}).value || 28);
+    var partes = periodo.split('/');
+    var mm = partes[0]; var yyyy = partes[1];
+    var compIni = yyyy + '-' + mm + '-' + String(diaIni).padStart(2, '0');
+    var compFim = yyyy + '-' + mm + '-' + String(diaFim).padStart(2, '0');
+    await liaSolicitar(empIdx, 'esocial', periodo, compIni, compFim);
+  }
+
+  async function liaSolicitar(empIdx, declId, periodo, compIniOverride, compFimOverride) {
     var emps = getEmpresas();
     var emp = emps[empIdx];
     if (!emp) return;
@@ -8202,8 +8296,17 @@ function renderEmpresasDashStats() {
     if (!cfg.senha) { alert('Configure a senha da LIA em Inteligencia > Configurar API'); return; }
     var tipo = LIA_TIPO_MAP[declId];
     if (!tipo) { alert('Tipo nao suportado pela LIA: ' + declId); return; }
-    var partes = periodo.split('/');
-    var comp = partes[1] + '-' + partes[0];
+    // Calcular competencias
+    var compIni, compFim;
+    if (compIniOverride && compFimOverride) {
+      compIni = compIniOverride; compFim = compFimOverride;
+    } else if (declId === 'ecd' || declId === 'ecf') {
+      // periodo = 'YYYY'
+      compIni = periodo + '-01'; compFim = periodo + '-12';
+    } else {
+      var partes = periodo.split('/');
+      compIni = partes[1] + '-' + partes[0]; compFim = compIni;
+    }
     var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
     var key = cnpj14 + '_' + declId + '_' + periodo;
     var btn = document.getElementById('lbtn-' + empIdx + '-' + declId + '-' + periodo.replace('/', 'x'));
@@ -8214,8 +8317,8 @@ function renderEmpresasDashStats() {
         nome_cliente: emp.razao_social || emp.cnpj,
         cnpj: cnpj14,
         tipo_arquivo: tipo,
-        competencia_ini: comp,
-        competencia_fim: comp
+        competencia_ini: compIni,
+        competencia_fim: compFim
       };
       var r = await fetch(cfg.url + '/api/v1/pedidos', {
         method: 'POST',
@@ -8265,6 +8368,19 @@ function renderEmpresasDashStats() {
     var lp = liaPedidos[key] || null;
     var btnId = 'lbtn-' + empIdx + '-' + declId + '-' + periodo.replace('/', 'x');
     if (!lp) {
+      if (declId === 'esocial') {
+        var esParts = periodo.split('/');
+        var esLastDay = new Date(parseInt(esParts[1]), parseInt(esParts[0]), 0).getDate();
+        var diIniId = 'ldi-' + empIdx + '-' + periodo.replace('/', 'x');
+        var diFimId = 'ldf-' + empIdx + '-' + periodo.replace('/', 'x');
+        return '<div style="display:flex;align-items:center;gap:.25rem;flex-wrap:wrap">' +
+          '<span style="font-size:.65rem;color:#94a3b8">dia</span>' +
+          '<input id="' + diIniId + '" type="number" min="1" max="31" value="1" style="width:38px;border:1px solid #c7d2fe;border-radius:4px;padding:.12rem .25rem;font-size:.68rem;text-align:center">' +
+          '<span style="font-size:.65rem;color:#94a3b8">a</span>' +
+          '<input id="' + diFimId + '" type="number" min="1" max="31" value="' + esLastDay + '" style="width:38px;border:1px solid #c7d2fe;border-radius:4px;padding:.12rem .25rem;font-size:.68rem;text-align:center">' +
+          '<button id="' + btnId + '" onclick="liaSolicitarEsocial(' + empIdx + ',\'' + periodo + '\',\'' + diIniId + '\',\'' + diFimId + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .45rem;font-size:.68rem;cursor:pointer;font-weight:700">📥</button>' +
+          '</div>';
+      }
       return '<button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .55rem;font-size:.68rem;cursor:pointer;white-space:nowrap;font-weight:700">📥 Solicitar</button>';
     }
     var st = lp.status || 'PENDENTE';
@@ -8385,6 +8501,29 @@ function renderEmpresasDashStats() {
     } catch(e) {
       if (r) { r.style.color = '#ef4444'; r.textContent = '❌ ' + e.message; }
     }
+  }
+
+  async function liaSolicitarTodosEmpresa(empIdx) {
+    var emps = getEmpresas();
+    var emp = emps[empIdx];
+    if (!emp) return;
+    var decls = (emp.declaracoes || []).filter(function(d){ return d.ativo && (d.controle || 'lia') === 'lia' && LIA_TIPO_MAP[d.id]; });
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+    var total = 0;
+    for (var di = 0; di < decls.length; di++) {
+      var d = decls[di];
+      var periods = empGetPeriods(d);
+      for (var pi = 0; pi < periods.length; pi++) {
+        var p = periods[pi];
+        var key = cnpj14 + '_' + d.id + '_' + p;
+        if (!pedidos[key]) {
+          try { await liaSolicitar(empIdx, d.id, p); total++; } catch(e) { console.warn('liaSolicitarTodos:', e); }
+        }
+      }
+    }
+    showToast(total + ' pedidos enviados para a LIA!', '#10b981');
+    if (document.getElementById('emp-checklist-overlay') && document.getElementById('emp-checklist-overlay').style.display !== 'none') empRenderChecklist();
   }
 
   async function _liaRefreshAll() {
