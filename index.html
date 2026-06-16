@@ -1225,6 +1225,11 @@ window.jdcRobo.esocial.getAllParaDownload();</pre>
               <input type="checkbox" id="emp-salvar-padrao" style="accent-color:var(--primary)">
               <label for="emp-salvar-padrao" style="font-size:.78rem;color:var(--text2);cursor:pointer">Salvar esta configuração como padrão para novas empresas</label>
             </div>
+            <div style="margin-top:.85rem;border-top:1px solid var(--border);padding-top:.85rem">
+              <label style="font-size:.78rem;font-weight:700;color:var(--text2)">📁 Pasta de destino dos arquivos LIA</label>
+              <p style="font-size:.7rem;color:var(--text3);margin:.2rem 0 .4rem">Opcional. Informe onde salvar os arquivos baixados desta empresa no seu computador. Os arquivos ficam sempre disponíveis no servidor.</p>
+              <input type="text" id="emp-pasta-local" placeholder="Ex: C:\SPED\Empresa XYZ (deixe vazio para usar apenas o servidor)" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;background:var(--surface)">
+            </div>
           </div>
         </div>
         <div class="modal-footer" id="emp-modal-footer" style="display:flex;gap:.5rem;justify-content:flex-end;padding:1rem 1.5rem;border-top:1px solid var(--border)">
@@ -7591,6 +7596,8 @@ function empAbrirModal(idx) {
     saveBtn.style.display = '';
     _empCurrentData = emp;
     empRenderDeclsList(emp.declaracoes || getEmpDefault());
+    const pastaEl = document.getElementById('emp-pasta-local');
+    if (pastaEl) pastaEl.value = emp.pasta_local || '';
   } else {
     title.textContent = '🏢 Nova Empresa';
     stepCnpj.style.display = '';
@@ -7680,7 +7687,7 @@ function empRenderDeclsList(decls) {
   el.innerHTML = decls.map((d, i) => {
     const isLia = (d.controle || 'lia') === 'lia';
     return `
-    <div class="emp-decl-row" data-idx="${i}" data-controle="${isLia?'lia':'manual'}"
+    <div class="emp-decl-row" data-idx="${i}" data-controle="${isLia?'lia':'manual'}" data-decl-id="${d.id||''}"
       style="background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden">
 
       <!-- Summary bar — always visible, click to expand -->
@@ -7827,7 +7834,8 @@ function empGetCurrentDecls() {
     const icon = parts[0] || '📄';
     const label = parts.slice(1).join(' ') || labelRaw;
     const isCustom = !!row.querySelector('button[onclick*="empRemoveDecl"]');
-    decls.push({ id: 'decl_' + i, label, icon, ativo, semPeriodo, controle, inicio, fim, custom: isCustom });
+    const declId = row.dataset.declId || ('decl_' + i);
+    decls.push({ id: declId, label, icon, ativo, semPeriodo, controle, inicio, fim, custom: isCustom });
   });
   return decls;
 }
@@ -7840,13 +7848,14 @@ function empSalvar() {
   const savePadrao = document.getElementById('emp-salvar-padrao')?.checked;
   if (savePadrao) lsSave(EMP_DEFAULT_KEY, JSON.parse(JSON.stringify(decls)));
 
+  const pastaLocal = (document.getElementById('emp-pasta-local')?.value || '').trim();
   const emps = getEmpresas();
   if (_empEditIdx >= 0) {
-    emps[_empEditIdx] = { ...emps[_empEditIdx], ..._empCurrentData, declaracoes: decls };
+    emps[_empEditIdx] = { ...emps[_empEditIdx], ..._empCurrentData, declaracoes: decls, pasta_local: pastaLocal };
     saveEmpresas(emps);
     showToast('Empresa atualizada!', '#10b981');
   } else {
-    emps.push({ ..._empCurrentData, declaracoes: decls, checklist: {}, adicionadoEm: new Date().toISOString() });
+    emps.push({ ..._empCurrentData, declaracoes: decls, checklist: {}, pasta_local: pastaLocal, adicionadoEm: new Date().toISOString() });
     saveEmpresas(emps);
     showToast('Empresa adicionada!', '#10b981');
     empFecharModal();
@@ -8413,7 +8422,7 @@ function renderEmpresasDashStats() {
       html += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + cor + ';color:' + cor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
     }
     if (st === 'CONCLUIDO' && lp.pedido_id) {
-      html += ' <button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\')" title="Salvar arquivo no computador" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">⬇️ Salvar</button>';
+      html += ' <button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\',' + empIdx + ')" title="Salvar arquivo no computador" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">⬇️ Salvar</button>';
     }
     if (st === 'ERRO') {
       html += ' <button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
@@ -8446,12 +8455,6 @@ function renderEmpresasDashStats() {
     h += '<input id="lia-cfg-user" value="' + (cfg.usuario || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
     h += '<div style="grid-column:1/-1"><label style="font-size:.73rem;color:#64748b">Senha</label><br>';
     h += '<input id="lia-cfg-senha" type="password" value="' + (cfg.senha || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
-    h += '<div style="grid-column:1/-1"><label style="font-size:.73rem;color:#64748b">Pasta de destino <span style="font-weight:400;color:#94a3b8">(opcional — onde salvar os arquivos baixados no seu computador)</span></label><br>';
-    h += '<div style="display:flex;gap:.35rem;margin-top:.15rem">';
-    h += '<input id="lia-cfg-pasta" value="' + esc(cfg.pasta_local || '') + '" placeholder="Ex: C:\\SPED\\Clientes  (deixe vazio para nao salvar localmente)" style="flex:1;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box">';
-    h += '</div>';
-    h += '<p style="font-size:.7rem;color:#94a3b8;margin:.25rem 0 0">Os arquivos ficam sempre disponiveis no servidor. Informe uma pasta apenas se quiser copia local automatica a cada download.</p>';
-    h += '</div>';
     h += '</div>';
     h += '<div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">';
     h += '<button onclick="_liaSaveCfg()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer;font-weight:700">💾 Salvar</button>';
@@ -8517,14 +8520,13 @@ function renderEmpresasDashStats() {
     var url = (document.getElementById('lia-cfg-url') || {}).value || '';
     var usuario = (document.getElementById('lia-cfg-user') || {}).value || '';
     var senha = (document.getElementById('lia-cfg-senha') || {}).value || '';
-    var pasta = ((document.getElementById('lia-cfg-pasta') || {}).value || '').trim();
-    liaSaveConfig({url: url.replace(/\/+$/, ''), usuario: usuario, senha: senha, pasta_local: pasta});
+    liaSaveConfig({url: url.replace(/\/+$/, ''), usuario: usuario, senha: senha});
     _liaToken = null; _liaTokenExp = 0;
     var r = document.getElementById('lia-test-result');
     if (r) { r.style.color = '#10b981'; r.textContent = '✅ Salvo!'; setTimeout(function(){ r.textContent = ''; }, 2000); }
   }
 
-  async function liaDownloadArquivo(pedidoId) {
+  async function liaDownloadArquivo(pedidoId, empIdx) {
     var cfg = liaGetConfig();
     try {
       var token = await liaGetToken();
@@ -8536,12 +8538,17 @@ function renderEmpresasDashStats() {
       var cd = r.headers.get('content-disposition') || '';
       var fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
       var filename = fnMatch ? fnMatch[1].replace(/['"]/g, '') : ('sped_' + pedidoId + '.txt');
-      var pasta = cfg.pasta_local ? cfg.pasta_local.split(/[/\\]/).pop() : '';
+      var pastaInfo = '';
+      if (empIdx !== undefined) {
+        var emps = getEmpresas();
+        var emp = emps[empIdx];
+        if (emp && emp.pasta_local) pastaInfo = ' | Pasta: ' + emp.pasta_local;
+      }
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url; a.download = filename; a.click();
       setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
-      showToast('Arquivo baixado: ' + filename, '#10b981');
+      showToast('Arquivo baixado: ' + filename + pastaInfo, '#10b981');
     } catch(e) {
       alert('Erro ao baixar arquivo: ' + e.message);
     }
