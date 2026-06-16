@@ -5506,12 +5506,46 @@ function startApp() {
     const el = ls(SK.log, []);
     lsSave(SK.log, [..._LOG, ...el].slice(0, 500));
   }
+  _migrarIdDeclaracoes(); // garante que IDs legados (decl_0, decl_1...) sejam corrigidos
   renderRecentComments();
   fetchWeather();
   loadNewsTicker();
   navTo('welcome', document.querySelector('.nav-link[data-page="welcome"]'));
   // Render big numbers immediately after nav loads
   setTimeout(() => { renderBigNumbers(); renderEmpresasDashStats(); }, 150);
+}
+
+// ── MIGRAÇÃO: IDs de declarações legados (decl_0 → efd_icms etc.) ────
+function _migrarIdDeclaracoes() {
+  var MAP_LABEL = {
+    'EFD ICMS/IPI': 'efd_icms',
+    'EFD Contribuições': 'efd_contrib',
+    'ECD': 'ecd',
+    'ECF': 'ecf',
+    'eSocial': 'esocial'
+  };
+  var emps = getEmpresas();
+  var alterado = false;
+  emps.forEach(function(emp) {
+    var renameMap = {};
+    (emp.declaracoes || []).forEach(function(d) {
+      if (d.id && d.id.startsWith('decl_')) {
+        var novoId = MAP_LABEL[d.label];
+        if (novoId) { renameMap[d.id] = novoId; d.id = novoId; alterado = true; }
+      }
+    });
+    // Migra chaves do checklist
+    if (Object.keys(renameMap).length && emp.checklist) {
+      Object.keys(renameMap).forEach(function(oldId) {
+        var newId = renameMap[oldId];
+        if (emp.checklist[oldId] && !emp.checklist[newId]) {
+          emp.checklist[newId] = emp.checklist[oldId];
+          delete emp.checklist[oldId];
+        }
+      });
+    }
+  });
+  if (alterado) { saveEmpresas(emps); console.info('JDC: IDs de declarações migrados com sucesso.'); }
 }
 
 // ── WEATHER (v2 — updates both chips) ─────────────
