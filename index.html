@@ -8000,6 +8000,7 @@ function empRenderChecklist() {
     const done = periods.filter(p => dCl[p] && dCl[p].baixado).length;
     const conf = periods.filter(p => dCl[p] && dCl[p].conferido).length;
     const isLia = (d.controle || 'lia') === 'lia';
+    const liaPedidos = isLia ? ls('jdc_lia_pedidos', {}) : {};
 
     return `<div style="margin-bottom:1.5rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
@@ -8021,6 +8022,7 @@ function empRenderChecklist() {
             <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)">
               <input type="checkbox" ${s.conferido?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','conferido',this.checked)" style="accent-color:#10b981"> Conferido
             </label>
+            ${isLia ? _liaRowHtml(_empClIdx, d.id, p, liaPedidos, emp.cnpj) : ''}
           </div>`;
         }).join('')}
       </div>
@@ -8081,6 +8083,7 @@ function renderEmpresasDashStats() {
     root.style.cssText='width:100%;padding:1.5rem 2rem;box-sizing:border-box;';
     pg.appendChild(root);
     _renderIntelUI(root);
+    liaRenderDashboard(root);
   }
 
   function _renderIntelUI(root){
@@ -8165,8 +8168,246 @@ function renderEmpresasDashStats() {
     },800);
   }
 
+  // ── LIA API (ReceitaNetBX) ─────────────────────────────────────────────
 
-  
+  var LIA_TIPO_MAP = {efd_icms:'EFD_ICMS_IPI', efd_contrib:'EFD_CONTRIBUICOES', ecd:'ECD', ecf:'ECF'};
+  var _liaToken = null;
+  var _liaTokenExp = 0;
+
+  function liaGetConfig() {
+    return ls('jdc_lia_api_cfg', {url:'http://156.67.25.1:8000', usuario:'admin@localhost', senha:''});
+  }
+  function liaSaveConfig(cfg) { lsSave('jdc_lia_api_cfg', cfg); }
+
+  async function liaGetToken() {
+    var now = Date.now();
+    if (_liaToken && now < _liaTokenExp) return _liaToken;
+    var cfg = liaGetConfig();
+    var fd = new FormData();
+    fd.append('username', cfg.usuario);
+    fd.append('password', cfg.senha);
+    var r = await fetch(cfg.url + '/api/v1/auth/token', {method:'POST', body:fd});
+    if (!r.ok) throw new Error('LIA auth falhou: ' + r.status);
+    var j = await r.json();
+    _liaToken = j.access_token;
+    _liaTokenExp = now + 27000000; // 450min
+    return _liaToken;
+  }
+
+  async function liaSolicitar(empIdx, declId, periodo) {
+    var emps = getEmpresas();
+    var emp = emps[empIdx];
+    if (!emp) return;
+    var cfg = liaGetConfig();
+    if (!cfg.senha) { alert('Configure a senha da LIA em Inteligencia > Configurar API'); return; }
+    var tipo = LIA_TIPO_MAP[declId];
+    if (!tipo) { alert('Tipo nao suportado pela LIA: ' + declId); return; }
+    var partes = periodo.split('/');
+    var comp = partes[1] + '-' + partes[0];
+    var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+    var key = cnpj14 + '_' + declId + '_' + periodo;
+    var btn = document.getElementById('lbtn-' + empIdx + '-' + declId + '-' + periodo.replace('/', 'x'));
+    if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+    try {
+      var token = await liaGetToken();
+      var body = {
+        nome_cliente: emp.razao_social || emp.cnpj,
+        cnpj: cnpj14,
+        tipo_arquivo: tipo,
+        competencia_ini: comp,
+        competencia_fim: comp
+      };
+      var r = await fetch(cfg.url + '/api/v1/pedidos', {
+        method: 'POST',
+        headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) { var err = await r.text(); throw new Error('LIA pedido falhou ' + r.status + ': ' + err); }
+      var j = await r.json();
+      var pedidos = ls('jdc_lia_pedidos', {});
+      pedidos[key] = {pedido_id: j.id, protocolo: j.protocolo, status: j.status, ts: Date.now()};
+      lsSave('jdc_lia_pedidos', pedidos);
+      empRenderChecklist();
+    } catch(e) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Solicitar'; }
+      alert('Erro ao solicitar: ' + e.message);
+    }
+  }
+
+  async function liaRefresh(empIdx, declId, periodo) {
+    var emps = getEmpresas();
+    var emp = emps[empIdx];
+    if (!emp) return;
+    var cfg = liaGetConfig();
+    var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+    var key = cnpj14 + '_' + declId + '_' + periodo;
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var p = pedidos[key];
+    if (!p) return;
+    try {
+      var token = await liaGetToken();
+      var r = await fetch(cfg.url + '/api/v1/pedidos/' + p.pedido_id, {
+        headers: {'Authorization': 'Bearer ' + token}
+      });
+      if (!r.ok) throw new Error('status ' + r.status);
+      var j = await r.json();
+      pedidos[key].status = j.status;
+      if (j.progresso !== undefined) pedidos[key].progresso = j.progresso;
+      lsSave('jdc_lia_pedidos', pedidos);
+      empRenderChecklist();
+      if (j.status === 'CONCLUIDO') empToggleCl(empIdx, declId, periodo, 'baixado', true);
+    } catch(e) { console.warn('LIA refresh:', e.message); }
+  }
+
+  function _liaRowHtml(empIdx, declId, periodo, liaPedidos, empCnpj) {
+    var cnpj14 = (empCnpj || '').replace(/\D/g, '');
+    var key = cnpj14 + '_' + declId + '_' + periodo;
+    var lp = liaPedidos[key] || null;
+    var btnId = 'lbtn-' + empIdx + '-' + declId + '-' + periodo.replace('/', 'x');
+    if (!lp) {
+      return '<button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .55rem;font-size:.68rem;cursor:pointer;white-space:nowrap;font-weight:700">📥 Solicitar</button>';
+    }
+    var st = lp.status || 'PENDENTE';
+    var cores = {PENDENTE:'#6b7280',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b',CONCLUIDO:'#10b981',ERRO:'#ef4444'};
+    var ics = {PENDENTE:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥',CONCLUIDO:'✅',ERRO:'❌'};
+    var cor = cores[st] || '#6b7280';
+    var ic = ics[st] || '⏳';
+    var html = '<span style="font-size:.68rem;font-weight:700;color:' + cor + ';white-space:nowrap">' + ic + ' ' + st + '</span>';
+    if (st !== 'CONCLUIDO') {
+      html += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + cor + ';color:' + cor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
+    }
+    if (st === 'ERRO') {
+      html += ' <button id="' + btnId + '" onclick="liaSolicitar(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#ef4444;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
+    }
+    return html;
+  }
+
+  function liaRenderDashboard(root) {
+    var cfg = liaGetConfig();
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var emps = getEmpresas();
+    var vals = Object.values(pedidos);
+    var ativos = vals.filter(function(p){ return p.status && p.status !== 'CONCLUIDO' && p.status !== 'ERRO'; });
+    var concluidos = vals.filter(function(p){ return p.status === 'CONCLUIDO'; });
+    var erros = vals.filter(function(p){ return p.status === 'ERRO'; });
+
+    var h = '<hr style="border:none;border-top:2px solid #e0e7ff;margin:1.5rem 0">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">';
+    h += '<h3 style="margin:0;font-size:1rem;color:#1e1b4b;font-weight:700">📥 Downloads LIA (ReceitaNetBX)</h3>';
+    h += '<button onclick="_liaRefreshAll()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.8rem;cursor:pointer;font-weight:700">↻ Atualizar todos</button>';
+    h += '</div>';
+
+    // Config collapsible
+    h += '<details style="background:#f8faff;border:2px solid #c7d2fe;border-radius:12px;padding:.85rem 1rem;margin-bottom:1rem">';
+    h += '<summary style="cursor:pointer;font-weight:700;color:#1e1b4b;font-size:.85rem">⚙️ Configurar API LIA</summary>';
+    h += '<div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem">';
+    h += '<div><label style="font-size:.73rem;color:#64748b">URL do servidor</label><br>';
+    h += '<input id="lia-cfg-url" value="' + (cfg.url || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '<div><label style="font-size:.73rem;color:#64748b">Usuário</label><br>';
+    h += '<input id="lia-cfg-user" value="' + (cfg.usuario || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '<div style="grid-column:1/-1"><label style="font-size:.73rem;color:#64748b">Senha</label><br>';
+    h += '<input id="lia-cfg-senha" type="password" value="' + (cfg.senha || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '</div>';
+    h += '<div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">';
+    h += '<button onclick="_liaSaveCfg()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer;font-weight:700">💾 Salvar</button>';
+    h += '<button onclick="_liaTestConn()" style="background:#fff;color:#6366f1;border:2px solid #6366f1;border-radius:8px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer;font-weight:700">🔌 Testar conexão</button>';
+    h += '<span id="lia-test-result" style="font-size:.78rem"></span>';
+    h += '</div></details>';
+
+    // Stats
+    h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1rem">';
+    h += _liaStat('⚙️ Em andamento', ativos.length, '#3b82f6', '#eff6ff');
+    h += _liaStat('✅ Concluídos', concluidos.length, '#10b981', '#f0fdf4');
+    h += _liaStat('❌ Erros', erros.length, '#ef4444', '#fef2f2');
+    h += '</div>';
+
+    // Pedidos list
+    if (vals.length === 0) {
+      h += '<div style="text-align:center;padding:2rem;color:#94a3b8;font-size:.88rem;background:#f8faff;border-radius:12px">Nenhum pedido ainda. Use os botões <b>📥 Solicitar</b> no checklist de cada empresa.</div>';
+    } else {
+      var entries = Object.entries(pedidos).sort(function(a,b){ return (b[1].ts||0)-(a[1].ts||0); });
+      h += '<div style="display:flex;flex-direction:column;gap:.35rem">';
+      var STATUS_CORES = {PENDENTE:'#6b7280',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b',CONCLUIDO:'#10b981',ERRO:'#ef4444'};
+      var STATUS_ICS   = {PENDENTE:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥',CONCLUIDO:'✅',ERRO:'❌'};
+      entries.forEach(function(pair) {
+        var k = pair[0]; var pv = pair[1];
+        var kParts = k.split('_');
+        var cnpj = kParts[0]; var declId = kParts[1]; var per = kParts.slice(2).join('_');
+        var st = pv.status || 'PENDENTE';
+        var cor = STATUS_CORES[st] || '#6b7280';
+        var ic = STATUS_ICS[st] || '⏳';
+        var empLabel = '';
+        for (var ei = 0; ei < emps.length; ei++) {
+          if ((emps[ei].cnpj || '').replace(/\D/g,'') === cnpj) { empLabel = emps[ei].razao_social || cnpj; break; }
+        }
+        if (!empLabel) empLabel = cnpj;
+        var tipoLabel = LIA_TIPO_MAP[declId] || declId;
+        h += '<div style="background:#fff;border:1px solid #e0e7ff;border-radius:8px;padding:.45rem .75rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">';
+        h += '<span style="font-size:.72rem;color:#475569;flex:1;min-width:100px">' + esc(empLabel) + '</span>';
+        h += '<span style="font-size:.7rem;color:#6366f1;font-weight:600">' + tipoLabel + '</span>';
+        h += '<span style="font-size:.7rem;color:#64748b">' + per + '</span>';
+        if (pv.protocolo) h += '<span style="font-size:.67rem;color:#94a3b8">#' + pv.protocolo + '</span>';
+        h += '<span style="font-size:.7rem;font-weight:700;color:' + cor + '">' + ic + ' ' + st + '</span>';
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+
+    var div = document.createElement('div');
+    div.innerHTML = h;
+    root.appendChild(div);
+  }
+
+  function _liaStat(label, val, cor, bg) {
+    return '<div style="background:' + bg + ';border:1.5px solid ' + cor + '33;border-radius:10px;padding:.75rem 1rem;text-align:center">' +
+      '<div style="font-size:1.5rem;font-weight:800;color:' + cor + '">' + val + '</div>' +
+      '<div style="font-size:.72rem;color:#64748b;margin-top:.2rem">' + label + '</div>' +
+      '</div>';
+  }
+
+  function _liaSaveCfg() {
+    var url = (document.getElementById('lia-cfg-url') || {}).value || '';
+    var usuario = (document.getElementById('lia-cfg-user') || {}).value || '';
+    var senha = (document.getElementById('lia-cfg-senha') || {}).value || '';
+    liaSaveConfig({url: url.replace(/\/+$/, ''), usuario: usuario, senha: senha});
+    _liaToken = null; _liaTokenExp = 0;
+    var r = document.getElementById('lia-test-result');
+    if (r) { r.style.color = '#10b981'; r.textContent = '✅ Salvo!'; setTimeout(function(){ r.textContent = ''; }, 2000); }
+  }
+
+  async function _liaTestConn() {
+    var r = document.getElementById('lia-test-result');
+    if (r) { r.style.color = '#6366f1'; r.textContent = '🔌 Testando…'; }
+    try {
+      _liaToken = null; _liaTokenExp = 0;
+      await liaGetToken();
+      if (r) { r.style.color = '#10b981'; r.textContent = '✅ Conectado!'; }
+    } catch(e) {
+      if (r) { r.style.color = '#ef4444'; r.textContent = '❌ ' + e.message; }
+    }
+  }
+
+  async function _liaRefreshAll() {
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var entries = Object.entries(pedidos);
+    var emps = getEmpresas();
+    for (var i = 0; i < entries.length; i++) {
+      var k = entries[i][0]; var pv = entries[i][1];
+      if (pv.status === 'CONCLUIDO' || pv.status === 'ERRO') continue;
+      var kParts = k.split('_');
+      var cnpj = kParts[0]; var declId = kParts[1]; var per = kParts.slice(2).join('_');
+      var empIdx = -1;
+      for (var ei = 0; ei < emps.length; ei++) {
+        if ((emps[ei].cnpj || '').replace(/\D/g,'') === cnpj) { empIdx = ei; break; }
+      }
+      if (empIdx >= 0) {
+        try { await liaRefresh(empIdx, declId, per); } catch(e) { console.warn('_liaRefreshAll:', e); }
+      }
+    }
+    renderInteligencia();
+  }
+
+
 </script>
 
 </body>
