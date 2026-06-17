@@ -813,10 +813,10 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
 
       <!-- Summary bar -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem" id="emp-summary-bar">
-        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('download')" id="fase-card-download"><div class="bn-card-icon">📥</div><div class="bn-card-val" id="emp-stat-download">—</div><div class="bn-card-lbl">Download</div></div>
-        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('conferencia')" id="fase-card-conferencia"><div class="bn-card-icon">🔍</div><div class="bn-card-val" id="emp-stat-conferencia">—</div><div class="bn-card-lbl">Conferência</div></div>
-        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('liberados')" id="fase-card-liberados"><div class="bn-card-icon">✅</div><div class="bn-card-val" id="emp-stat-liberados">—</div><div class="bn-card-lbl">Liberados</div></div>
-        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('')" id="fase-card-total"><div class="bn-card-icon">📊</div><div class="bn-card-val" id="emp-stat-total-geral">—</div><div class="bn-card-lbl">Total geral</div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('download')" id="fase-card-download"><div class="bn-card-icon">📥</div><div class="bn-card-val" id="emp-stat-download">—</div><div class="bn-card-lbl">Download</div><div style="font-size:.65rem;color:var(--text3);margin-top:.1rem;min-height:.9rem" id="emp-stat-download-sub"></div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('conferencia')" id="fase-card-conferencia"><div class="bn-card-icon">🔍</div><div class="bn-card-val" id="emp-stat-conferencia">—</div><div class="bn-card-lbl">Conferência</div><div style="font-size:.65rem;color:var(--text3);margin-top:.1rem;min-height:.9rem" id="emp-stat-conferencia-sub"></div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('liberados')" id="fase-card-liberados"><div class="bn-card-icon">✅</div><div class="bn-card-val" id="emp-stat-liberados">—</div><div class="bn-card-lbl">Liberados</div><div style="font-size:.65rem;color:var(--text3);margin-top:.1rem;min-height:.9rem" id="emp-stat-liberados-sub"></div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('')" id="fase-card-total"><div class="bn-card-icon">📊</div><div class="bn-card-val" id="emp-stat-total-geral">—</div><div class="bn-card-lbl">Total geral</div><div style="font-size:.65rem;color:var(--text3);margin-top:.1rem;min-height:.9rem" id="emp-stat-total-sub"></div></div>
       </div>
       <!-- Filtros de fase -->
       <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
@@ -883,14 +883,6 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
           <div class="admin-section" id="admin-sec-changelog">
             <div class="row-between" style="margin-bottom:1rem">
               <h3>📚 Changelog — Histórico de Versões</h3>
-            </div>
-            <div class="card card-pad" style="margin-bottom:1rem">
-              <div style="display:grid;grid-template-columns:120px 1fr;gap:.5rem;margin-bottom:.5rem">
-                <div><label style="font-size:.72rem;color:var(--text3)">Versão</label><input id="cl-ver" class="input" placeholder="Ex: 1.5.8" style="margin-top:.2rem"></div>
-                <div><label style="font-size:.72rem;color:var(--text3)">Data</label><input id="cl-data" type="date" class="input" style="margin-top:.2rem"></div>
-              </div>
-              <div style="margin-bottom:.5rem"><label style="font-size:.72rem;color:var(--text3)">Descrição das mudanças</label><textarea id="cl-desc" class="input" rows="3" placeholder="Descreva o que mudou nesta versão..." style="width:100%;margin-top:.2rem;box-sizing:border-box;resize:vertical"></textarea></div>
-              <button class="btn btn-primary btn-sm" onclick="changelogSalvar()">💾 Salvar entrada</button>
             </div>
             <div id="changelog-list"></div>
           </div>
@@ -1328,18 +1320,24 @@ window.jdcRobo.esocial.getAllParaDownload();</pre>
             <span id="lia-select-preview" style="font-size:.84rem;font-weight:700;color:var(--primary)">—</span>
           </div>
           <div style="margin-bottom:1rem">
-            <div style="font-size:.76rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem">📁 Salvar localmente</div>
-            <label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text2);margin-bottom:.4rem;cursor:pointer">
-              <input type="checkbox" id="lia-sem-pasta-local" onchange="document.getElementById('lia-pasta-local-row').style.display=this.checked?'none':''" style="accent-color:var(--primary)"> Não salvar localmente (manter só na VM)
+            <div style="font-size:.76rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem">📁 Pasta de destino (na VM)</div>
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text2);margin-bottom:.5rem;cursor:pointer">
+              <input type="checkbox" id="lia-sem-pasta-local" onchange="document.getElementById('lia-pasta-local-row').style.display=this.checked?'none':'block';_liaValidarCaminho()" style="accent-color:var(--primary)"> Não especificar pasta (usar padrão da VM)
             </label>
             <div id="lia-pasta-local-row">
-              <input type="text" id="lia-pasta-local" placeholder="Ex: C:\Users\leandro.falco\Documents\SPED" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.8rem;box-sizing:border-box;background:var(--surface)">
-              <div style="font-size:.68rem;color:var(--text3);margin-top:.2rem">Deixe em branco para usar a pasta padrão da empresa ou da VM.</div>
+              <div style="display:flex;gap:.35rem;flex-wrap:wrap;margin-bottom:.4rem">
+                <button type="button" onclick="_liaSetPasta('C:\\Download_ReceitaNetBx\\')" style="font-size:.7rem;padding:.22rem .55rem;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer">📂 Download_ReceitaNetBx</button>
+                <button type="button" onclick="_liaSetPasta('C:\\SPED\\')" style="font-size:.7rem;padding:.22rem .55rem;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer">📂 C:\SPED</button>
+                <button type="button" onclick="_liaSetPasta('C:\\Downloads\\')" style="font-size:.7rem;padding:.22rem .55rem;border-radius:6px;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);cursor:pointer">📂 C:\Downloads</button>
+              </div>
+              <input type="text" id="lia-pasta-local" oninput="_liaValidarCaminho()" placeholder="Ex: C:\Download_ReceitaNetBx\" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.8rem;box-sizing:border-box;background:var(--surface)">
+              <div style="font-size:.68rem;color:var(--text3);margin-top:.2rem">Caminho na VM onde os arquivos serão salvos. Clique num atalho acima ou digite.</div>
             </div>
+            <div id="lia-pasta-aviso" style="display:none;font-size:.72rem;color:#dc2626;margin-top:.3rem;font-weight:600">⚠️ Selecione a pasta de destino ou marque "não especificar" para continuar.</div>
           </div>
           <div style="display:flex;gap:.6rem;justify-content:flex-end">
             <button onclick="document.getElementById('lia-select-modal').style.display='none'" style="padding:.45rem 1rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:.82rem;cursor:pointer;font-weight:600">Cancelar</button>
-            <button id="lia-select-confirm-btn" onclick="empConfirmarLiaSelect()" style="padding:.45rem 1.25rem;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
+            <button id="lia-select-confirm-btn" onclick="empConfirmarLiaSelect()" disabled style="padding:.45rem 1.25rem;border-radius:8px;border:none;background:#94a3b8;color:#fff;font-size:.82rem;font-weight:700;cursor:not-allowed;opacity:.7">📥 Solicitar</button>
           </div>
         </div>
       </div>
@@ -1530,8 +1528,8 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.5.9';
-const APP_BUILD   = '2026-06-16';
+const APP_VERSION = '1.6.0';
+const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
 // ─────────────────────────────────────────────
@@ -5492,39 +5490,33 @@ function setAdminTab(tab, btn) {
   if (tab === 'ranking') renderRanking('geral');
 }
 
-function changelogSalvar() {
-  var ver  = (document.getElementById('cl-ver')  || {}).value || '';
-  var data = (document.getElementById('cl-data') || {}).value || '';
-  var desc = (document.getElementById('cl-desc') || {}).value || '';
-  if (!ver || !desc) { showToast('Preencha versão e descrição.', '#ef4444'); return; }
-  var log = ls('jdc_changelog', []);
-  log.unshift({ ver: ver.trim(), data: data || new Date().toISOString().slice(0,10), desc: desc.trim(), ts: Date.now() });
-  lsSave('jdc_changelog', log);
-  if (document.getElementById('cl-ver'))  document.getElementById('cl-ver').value  = '';
-  if (document.getElementById('cl-desc')) document.getElementById('cl-desc').value = '';
-  showToast('Entrada salva!', '#10b981');
-  renderChangelog();
-}
-
-function changelogDeletar(idx) {
-  if (!confirm('Remover esta entrada do changelog?')) return;
-  var log = ls('jdc_changelog', []);
-  log.splice(idx, 1);
-  lsSave('jdc_changelog', log);
-  renderChangelog();
-}
+// Histórico de versões mantido pelo desenvolvedor
+const CHANGELOG_ENTRIES = [
+  { ver: '1.6.0', data: '2026-06-17', desc: 'Cards de fase contam por empresa (não período); sub-label mostra qtd de períodos. Botão ⚙️ removido do card — clique no nome da empresa para editar. Remover empresa exige senha e avisa sobre arquivos baixados. 🤖 aparece só após solicitar download. Pasta LIA: atalhos rápidos de caminho. Changelog: leitura apenas, mantido pelo dev. _liaRefreshAll com feedback visual.' },
+  { ver: '1.5.9', data: '2026-06-16', desc: 'Barra de progresso LIA interativa no card (clicável, mostra concluídos/pendentes/erros). Períodos pendentes baseados em pedidos solicitados, não no total configurado. Validação de pasta local antes de solicitar (obrigatório preencher ou marcar "não salvar"). Tabs renomeadas: "Fluxo de documentos" e "Visibilidade". Ícone Visibilidade = 🧠. Números "1)" e "2)" removidos das tabs. Seção Downloads LIA movida para Admin. Changelog implementado no Admin.' },
+  { ver: '1.5.8', data: '2026-06-15', desc: 'Sincronizar: frontend chama POST /api/v1/pedidos/sincronizar antes de ler status do banco. Checklist redesenhado: accordion por declaração, status pills clicáveis. CSV só aparece após ao menos um download. Filtros de fase (Download/Conferência/Liberados) no Fluxo de Documentos. Cards de stats por fase.' },
+  { ver: '1.5.5', data: '2026-06-12', desc: 'LIA: Botões Baixar LIA/Solicitar/Limpar visíveis apenas para Admin. Seção Downloads LIA movida para Admin. Barra de download removida do rodapé — status inline nos cards de empresa.' },
+  { ver: '1.5.0', data: '2026-06-10', desc: 'Versão base: Fluxo de documentos, checklist por período, integração ReceitaNetBX, autenticação com perfis Admin/Usuário, Dashboard, Auxiliares.' },
+];
 
 function renderChangelog() {
   var el = document.getElementById('changelog-list');
   if (!el) return;
-  var log = ls('jdc_changelog', []);
-  if (!log.length) { el.innerHTML = '<div style="color:var(--text3);font-size:.85rem;padding:.75rem 0">Nenhuma entrada ainda. Adicione a primeira acima.</div>'; return; }
-  el.innerHTML = log.map(function(e, i) {
-    return '<div class="card card-pad" style="margin-bottom:.6rem">' +
+  // Mescla entradas do código com eventuais do localStorage (compatibilidade)
+  var extra = ls('jdc_changelog', []);
+  var todas = CHANGELOG_ENTRIES.slice();
+  extra.forEach(function(e) {
+    if (!todas.find(function(x){ return x.ver === e.ver; })) todas.push(e);
+  });
+  todas.sort(function(a,b){ return b.ver.localeCompare(a.ver, undefined, {numeric:true}); });
+  if (!todas.length) { el.innerHTML = '<div style="color:var(--text3);font-size:.85rem;padding:.75rem 0">Sem entradas.</div>'; return; }
+  el.innerHTML = todas.map(function(e, i) {
+    var isCurrent = e.ver === APP_VERSION;
+    return '<div class="card card-pad" style="margin-bottom:.6rem' + (isCurrent?';border:2px solid var(--primary)':'') + '">' +
       '<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem">' +
       '<span style="font-size:.82rem;font-weight:800;color:var(--primary)">v' + esc(e.ver) + '</span>' +
       '<span style="font-size:.72rem;color:var(--text3)">' + esc(e.data) + '</span>' +
-      '<button onclick="changelogDeletar(' + i + ')" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:.75rem" title="Remover">✕</button>' +
+      (isCurrent ? '<span style="margin-left:auto;font-size:.68rem;background:var(--primary);color:#fff;border-radius:99px;padding:.1rem .5rem;font-weight:700">atual</span>' : '') +
       '</div>' +
       '<div style="font-size:.8rem;color:var(--text2);white-space:pre-wrap">' + esc(e.desc) + '</div>' +
       '</div>';
@@ -8094,40 +8086,37 @@ function renderEmpresas() {
   );
   if (_empFaseFilter) emps = emps.filter(e => _empFaseMatch(e, _empFaseFilter));
 
-  // Update summary
+  // Update summary — contagem por EMPRESA (pior fase ganha)
   const all = getEmpresas();
-  let totalDecls = 0, okDecls = 0, pendDecls = 0;
-  all.forEach(e => {
-    const ativos = (e.declaracoes||[]).filter(d=>d.ativo);
-    totalDecls += ativos.length;
-    ativos.forEach(d => {
-      const cl = e.checklist || {};
-      const periods = empGetPeriods(d);
-      periods.forEach(p => {
-        if (cl[d.id] && cl[d.id][p] && cl[d.id][p].baixado) okDecls++;
-        else pendDecls++;
-      });
-    });
-  });
   let liberados = 0, conferencia = 0, download = 0;
+  let libPed = 0, confPed = 0, dlPed = 0;
   all.forEach(e => {
-    const ativos2 = (e.declaracoes||[]).filter(d=>d.ativo);
+    const ativos2 = (e.declaracoes||[]).filter(d=>d.ativo && !d.semPeriodo);
+    const cl2 = e.checklist || {};
+    let totalP = 0, baixP = 0, confP = 0;
     ativos2.forEach(d => {
-      const cl2 = e.checklist || {};
       const periods2 = empGetPeriods(d);
+      totalP += periods2.length;
       periods2.forEach(p => {
         const s2 = (cl2[d.id]&&cl2[d.id][p]) || {};
-        if (s2.conferido) liberados++;
-        else if (s2.baixado) conferencia++;
-        else download++;
+        if (s2.baixado)  baixP++;
+        if (s2.conferido) confP++;
       });
     });
+    if (totalP === 0) return;
+    if (confP === totalP)  { liberados++;  libPed  += totalP; }
+    else if (baixP === totalP) { conferencia++; confPed += totalP; }
+    else                   { download++;   dlPed   += totalP; }
   });
   const set = (id, v) => { const el2 = document.getElementById(id); if (el2) el2.textContent = v; };
-  set('emp-stat-download', download);
+  set('emp-stat-download',    download);
   set('emp-stat-conferencia', conferencia);
-  set('emp-stat-liberados', liberados);
+  set('emp-stat-liberados',   liberados);
   set('emp-stat-total-geral', download + conferencia + liberados);
+  set('emp-stat-download-sub',    dlPed   ? dlPed   + ' per.' : '');
+  set('emp-stat-conferencia-sub', confPed ? confPed + ' per.' : '');
+  set('emp-stat-liberados-sub',   libPed  ? libPed  + ' per.' : '');
+  set('emp-stat-total-sub', (dlPed+confPed+libPed) ? (dlPed+confPed+libPed) + ' per.' : '');
 
   if (!emps.length) {
     el.innerHTML = `<div style="text-align:center;padding:4rem;color:var(--text3)">
@@ -8220,14 +8209,13 @@ function empCard(e, i) {
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;box-shadow:var(--sh);display:flex;flex-direction:column;gap:.75rem">
     <!-- Header -->
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
-      <div style="flex:1;min-width:0">
+      <div style="flex:1;min-width:0;cursor:pointer" onclick="empAbrirModal(${i})" title="Clique para editar empresa">
         <div style="font-size:.68rem;font-weight:700;color:var(--primary);letter-spacing:.06em">${_fmtCnpj(e.cnpj||'')}</div>
         <div style="font-weight:800;font-size:.95rem;color:var(--text);line-height:1.3;margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.razao_social||e.nome_fantasia||'—')}</div>
         ${e.nome_fantasia && e.nome_fantasia !== e.razao_social ? `<div style="font-size:.75rem;color:var(--text3)">${esc(e.nome_fantasia)}</div>` : ''}
       </div>
       <div style="display:flex;gap:.25rem">
-        <button onclick="empAbrirModal(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.3rem .55rem;cursor:pointer;font-size:.78rem;color:var(--text3)" title="Editar">⚙️</button>
-        <button onclick="empConfirmarRemover(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.3rem .55rem;cursor:pointer;font-size:.78rem;color:var(--text3)" title="Remover">✕</button>
+        <button onclick="event.stopPropagation();empConfirmarRemover(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.3rem .55rem;cursor:pointer;font-size:.78rem;color:var(--text3)" title="Remover empresa">✕</button>
       </div>
     </div>
 
@@ -8245,13 +8233,33 @@ function empCard(e, i) {
         const done = ps.filter(p => cl[d.id] && cl[d.id][p] && cl[d.id][p].baixado).length;
         const ok = (d.semPeriodo && d.ativo) || (ps.length && done === ps.length);
         const isLia = (d.controle || 'lia') === 'lia';
-        const ctrlBadge = isLia ? ' 🤖' : ' 👤';
+        const hasLiaPed = isLia && _todosP.some(([k]) => k.startsWith(_cnpj14c + '_' + d.id + '_'));
+        const ctrlBadge = hasLiaPed ? ' 🤖' : (isLia ? '' : ' 👤');
         return `<span style="font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:99px;background:${ok?'#dcfce7':'var(--bg)'};color:${ok?'#16a34a':'var(--text3)'};border:1px solid ${ok?'#86efac':'var(--border)'}" title="${d.label}${isLia?' — L\'IA':' — Manual'}: ${d.semPeriodo?'sem período':done+'/'+ps.length+' baixados'}">${d.icon||'📄'} ${esc(d.label)}${ctrlBadge}</span>`;
       }).join('')}
     </div>` : `<div style="font-size:.78rem;color:var(--text3)">Nenhuma declaração configurada</div>`}
 
-    <!-- Progress bar -->
-    ${totalPeriods > 0 ? `<div>
+    <!-- Barra de progresso LIA (baseada em pedidos solicitados) -->
+    ${_liaTem ? (() => {
+      const _total = _todosP.length;
+      const _concP = _liaConc;
+      const _pct2  = _total ? Math.round(_concP / _total * 100) : 0;
+      const _barColor = _concP === _total ? '#10b981' : _liaAtivos > 0 ? '#6366f1' : '#f59e0b';
+      return `<div onclick="empAbrirChecklist(${i})" title="Clique para abrir o checklist" style="cursor:pointer;padding:.5rem .7rem;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.35rem;align-items:center">
+          <span style="font-size:.72rem;font-weight:700;color:var(--text2)">📥 Downloads LIA</span>
+          <span style="font-size:.72rem;font-weight:700;color:${_barColor}">${_concP}/${_total} · ${_pct2}%</span>
+        </div>
+        <div style="background:var(--border);border-radius:99px;height:8px;overflow:hidden;margin-bottom:.35rem">
+          <div style="width:${_pct2}%;background:${_barColor};height:8px;border-radius:99px;transition:.5s"></div>
+        </div>
+        <div style="display:flex;gap:.6rem;font-size:.68rem;flex-wrap:wrap">
+          ${_liaAtivos ? `<span style="color:#6366f1">⏳ ${_liaAtivos} em andamento</span>` : ''}
+          ${_liaConc   ? `<span style="color:#10b981">✅ ${_liaConc} concluídos</span>`    : ''}
+          ${_liaErros  ? `<span style="color:#ef4444">❌ ${_liaErros} erros</span>`         : ''}
+        </div>
+      </div>`;
+    })() : (totalPeriods > 0 ? `<div>
       <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
         <span style="font-size:.72rem;color:var(--text3)">Downloads</span>
         <span style="font-size:.72rem;font-weight:700;color:${progColor}">${baixados}/${totalPeriods} períodos</span>
@@ -8259,15 +8267,7 @@ function empCard(e, i) {
       <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden">
         <div style="width:${pct}%;background:${progColor};height:6px;border-radius:99px;transition:.4s"></div>
       </div>
-    </div>` : ''}
-
-    <!-- Pedidos LIA pendentes -->
-    ${_liaTem ? `<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;padding:.4rem .6rem;border-radius:8px;background:var(--bg);border:1px solid var(--border);font-size:.72rem">
-      <span style="font-weight:700;color:var(--text3)">📥 LIA:</span>
-      ${_liaAtivos ? `<span style="color:#6366f1;font-weight:600">⏳ ${_liaAtivos} pendente(s)</span>` : ''}
-      ${_liaErros  ? `<span style="color:#ef4444;font-weight:600">❌ ${_liaErros} erro(s)</span>` : ''}
-      ${_liaConc   ? `<span style="color:#10b981;font-weight:600">✅ ${_liaConc} concluído(s)</span>` : ''}
-    </div>` : ''}
+    </div>` : '')}
 
     <!-- Actions -->
     <div style="display:flex;gap:.5rem;margin-top:.25rem;flex-wrap:wrap">
@@ -8279,10 +8279,65 @@ function empCard(e, i) {
 
 function empConfirmarRemover(i) {
   const emp = getEmpresas()[i];
-  if (!confirm('Remover "' + (emp.razao_social || emp.cnpj) + '"?')) return;
+  if (!emp) return;
+  const cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+  // Verifica pedidos LIA existentes
+  const pedidos = ls('jdc_lia_pedidos', {});
+  const liaKeys = Object.keys(pedidos).filter(k => k.startsWith(cnpj14 + '_'));
+  const temArqs = liaKeys.length > 0;
+  const conc    = liaKeys.filter(k => pedidos[k].status === 'CONCLUIDO').length;
+
+  // Cria modal de confirmação
+  const prev = document.getElementById('_modal-remover-emp');
+  if (prev) prev.remove();
+  const ov = document.createElement('div');
+  ov.id = '_modal-remover-emp';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML = `<div style="background:var(--surface);border-radius:16px;padding:1.75rem;width:min(420px,94vw);box-shadow:0 8px 32px rgba(0,0,0,.22)">
+    <div style="font-size:1.35rem;margin-bottom:.4rem">🗑️ Remover empresa?</div>
+    <div style="font-weight:700;color:var(--text);margin-bottom:.75rem">${esc(emp.razao_social||emp.cnpj)}</div>
+    ${temArqs ? `<div style="background:#fef2f2;border:1.5px solid #fecaca;border-radius:8px;padding:.6rem .8rem;font-size:.8rem;color:#dc2626;margin-bottom:.75rem">
+      ⚠️ Esta empresa possui <b>${liaKeys.length} pedido(s) LIA</b> no histórico${conc ? ' — <b>'+conc+' concluído(s)</b> com arquivos baixados' : ''}.<br>
+      <span style="font-size:.72rem">Os registros do histórico LIA também serão removidos.</span>
+    </div>` : ''}
+    <div style="font-size:.8rem;color:var(--text2);margin-bottom:.4rem">Digite sua senha para confirmar:</div>
+    <input type="password" id="_rem-senha" class="input" placeholder="Sua senha" style="width:100%;box-sizing:border-box;margin-bottom:1rem" onkeydown="if(event.key==='Enter')_execRemoverEmp(${i})">
+    <div id="_rem-err" style="font-size:.75rem;color:#dc2626;margin-bottom:.6rem;display:none"></div>
+    <div style="display:flex;gap:.6rem;justify-content:flex-end">
+      <button onclick="document.getElementById('_modal-remover-emp').remove()" style="padding:.45rem 1rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:.82rem;cursor:pointer;font-weight:600">Cancelar</button>
+      <button onclick="_execRemoverEmp(${i})" style="padding:.45rem 1.1rem;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:.82rem;font-weight:700;cursor:pointer">🗑️ Remover</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(() => { const inp = document.getElementById('_rem-senha'); if (inp) inp.focus(); }, 50);
+}
+
+async function _execRemoverEmp(i) {
+  const senhaInput = document.getElementById('_rem-senha');
+  const errEl = document.getElementById('_rem-err');
+  const senha = (senhaInput ? senhaInput.value : '');
+  const sess = getSession();
+  if (!sess) { if (errEl) { errEl.textContent = 'Sessão inválida.'; errEl.style.display = ''; } return; }
+  const hash = await sha256(senha);
+  const users = getUsers();
+  const user = users.find(u => u.id === sess.id);
+  if (!user || user.hash !== hash) {
+    if (errEl) { errEl.textContent = '❌ Senha incorreta. Tente novamente.'; errEl.style.display = ''; }
+    if (senhaInput) { senhaInput.value = ''; senhaInput.focus(); }
+    return;
+  }
+  // Remove empresa e pedidos LIA associados
   const emps = getEmpresas();
+  const emp = emps[i];
+  const cnpj14 = (emp ? emp.cnpj || '' : '').replace(/\D/g, '');
   emps.splice(i, 1);
   saveEmpresas(emps);
+  // Remove pedidos LIA
+  const pedidos = ls('jdc_lia_pedidos', {});
+  Object.keys(pedidos).filter(k => k.startsWith(cnpj14 + '_')).forEach(k => delete pedidos[k]);
+  lsSave('jdc_lia_pedidos', pedidos);
+  const ov = document.getElementById('_modal-remover-emp');
+  if (ov) ov.remove();
   renderEmpresas();
   showToast('Empresa removida', '#10b981');
 }
@@ -8860,7 +8915,7 @@ function renderEmpresasDashStats() {
     var h = '<hr style="border:none;border-top:2px solid #e0e7ff;margin:1.5rem 0">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">';
     h += '<h3 style="margin:0;font-size:1rem;color:#1e1b4b;font-weight:700">📥 Downloads LIA (ReceitaNetBX)</h3>';
-    h += '<button onclick="_liaRefreshAll()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.8rem;cursor:pointer;font-weight:700">↻ Atualizar todos</button>';
+    h += '<button onclick="_liaRefreshAll(this)" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.8rem;cursor:pointer;font-weight:700">↻ Atualizar todos</button>';
     h += '</div>';
 
     // Config collapsible
@@ -9027,6 +9082,27 @@ function renderEmpresasDashStats() {
     liaSelectUpdatePreview();
     var modal = document.getElementById('lia-select-modal');
     if (modal) modal.style.display = 'flex';
+  }
+
+  function _liaSetPasta(p) {
+    var inp = document.getElementById('lia-pasta-local');
+    if (inp) { inp.value = p; }
+    _liaValidarCaminho();
+  }
+
+  function _liaValidarCaminho() {
+    var semPasta = (document.getElementById('lia-sem-pasta-local') || {}).checked;
+    var pasta    = ((document.getElementById('lia-pasta-local') || {}).value || '').trim();
+    var ok = semPasta || pasta.length > 0;
+    var btn = document.getElementById('lia-select-confirm-btn');
+    var aviso = document.getElementById('lia-pasta-aviso');
+    if (btn) {
+      btn.disabled = !ok;
+      btn.style.background = ok ? 'var(--primary)' : '#94a3b8';
+      btn.style.cursor = ok ? 'pointer' : 'not-allowed';
+      btn.style.opacity = ok ? '1' : '0.7';
+    }
+    if (aviso) aviso.style.display = ok ? 'none' : '';
   }
 
   function liaSelectUpdatePreview() {
@@ -9289,16 +9365,27 @@ function renderEmpresasDashStats() {
   }
 
   // ── REFRESH ALL + POLLING ─────────────────────────────────────────────
-  async function _liaRefreshAll() {
+  async function _liaRefreshAll(btnEl) {
+    var btn = btnEl || document.querySelector('[onclick*="_liaRefreshAll"]');
+    var origText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Sincronizando...'; }
+
     // 1) Pede ao backend para sincronizar status com ReceitaNetBX
+    var sincResult = null;
     try {
       var token = await liaGetToken();
       var cfg = liaGetConfig();
-      await fetch(cfg.url + '/api/v1/pedidos/sincronizar', {
+      var sr = await fetch(cfg.url + '/api/v1/pedidos/sincronizar', {
         method: 'POST',
         headers: {'Authorization': 'Bearer ' + token}
       });
-    } catch(e) { console.warn('_liaRefreshAll sincronizar:', e); }
+      if (sr.ok) sincResult = await sr.json();
+    } catch(e) {
+      console.warn('_liaRefreshAll sincronizar:', e);
+      showToast('⚠️ Erro ao sincronizar: ' + (e.message || e), '#ef4444');
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+      return;
+    }
 
     // 2) Agora lê o status atualizado do banco para cada pedido pendente
     var pedidos = ls('jdc_lia_pedidos', {});
@@ -9320,6 +9407,12 @@ function renderEmpresasDashStats() {
     renderEmpresas();
     if (document.getElementById('pg-inteligencia') && document.getElementById('pg-inteligencia').classList.contains('active')) renderInteligencia();
     if (document.getElementById('admin-sec-lia') && document.getElementById('admin-sec-lia').classList.contains('active')) renderAdminLia();
+    // Restaura botão e mostra resumo
+    if (btn) { btn.disabled = false; btn.textContent = origText; }
+    if (sincResult) {
+      var n = sincResult.sincronizados || 0;
+      showToast(n ? '✅ ' + n + ' pedido(s) atualizado(s)' : '🔄 Nenhum status alterado', n ? '#10b981' : '#6366f1');
+    }
   }
 
   // Auto-poll a cada 8 segundos enquanto há pedidos ativos
