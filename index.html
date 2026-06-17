@@ -1528,7 +1528,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5492,6 +5492,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.6.1', data: '2026-06-17', desc: 'Checklist: status e contador agora refletem os downloads concluidos da LIA (antes apareciam como Pendente mesmo ja baixados).' },
   { ver: '1.6.0', data: '2026-06-17', desc: 'Cards de fase contam por empresa (não período); sub-label mostra qtd de períodos. Botão ⚙️ removido do card — clique no nome da empresa para editar. Remover empresa exige senha e avisa sobre arquivos baixados. 🤖 aparece só após solicitar download. Pasta LIA: atalhos rápidos de caminho. Changelog: leitura apenas, mantido pelo dev. _liaRefreshAll com feedback visual.' },
   { ver: '1.5.9', data: '2026-06-16', desc: 'Barra de progresso LIA interativa no card (clicável, mostra concluídos/pendentes/erros). Períodos pendentes baseados em pedidos solicitados, não no total configurado. Validação de pasta local antes de solicitar (obrigatório preencher ou marcar "não salvar"). Tabs renomeadas: "Fluxo de documentos" e "Visibilidade". Ícone Visibilidade = 🧠. Números "1)" e "2)" removidos das tabs. Seção Downloads LIA movida para Admin. Changelog implementado no Admin.' },
   { ver: '1.5.8', data: '2026-06-15', desc: 'Sincronizar: frontend chama POST /api/v1/pedidos/sincronizar antes de ler status do banco. Checklist redesenhado: accordion por declaração, status pills clicáveis. CSV só aparece após ao menos um download. Filtros de fase (Download/Conferência/Liberados) no Fluxo de Documentos. Cards de stats por fase.' },
