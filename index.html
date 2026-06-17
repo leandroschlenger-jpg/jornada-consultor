@@ -1492,7 +1492,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.5.5';
+const APP_VERSION = '1.5.4';
 const APP_BUILD   = '2026-06-16';
 
 // STORAGE HELPERS
@@ -8120,7 +8120,7 @@ function empCard(e, i) {
     <!-- Actions -->
     <div style="display:flex;gap:.5rem;margin-top:.25rem;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" style="flex:1" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
-      ${getSession()&&getSession().admin ? '<button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;font-size:.75rem;padding:.35rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect('+i+')" title="Solicitar download LIA — selecionar declarações e período">📥 Baixar LIA</button>' : ''}
+      <button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;font-size:.75rem;padding:.35rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect(${i})" title="Solicitar download LIA — selecionar declarações e período">📥 Baixar LIA</button>
     </div>
   </div>`;
 }
@@ -8170,8 +8170,8 @@ function empRenderChecklist() {
   const allLiaPedidos = ls('jdc_lia_pedidos', {});
 
   const toolbar = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);flex-wrap:wrap">
-    ${getSession()&&getSession().admin ? '<button onclick="empAbrirLiaSelect('+_empClIdx+')" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>' : ''}
-    ${getSession()&&getSession().admin ? '<button onclick="empLimparPedidos('+_empClIdx+')" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>' : ''}
+    <button onclick="empAbrirLiaSelect(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
+    <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>
     <div style="flex:1"></div>
     <button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>
   </div>`;
@@ -8636,4 +8636,533 @@ function renderEmpresasDashStats() {
           '<span style="font-size:.65rem;color:#94a3b8">dia</span>' +
           '<input id="' + diIniId + '" type="number" min="1" max="31" value="1" style="width:38px;border:1px solid #c7d2fe;border-radius:4px;padding:.12rem .25rem;font-size:.68rem;text-align:center">' +
           '<span style="font-size:.65rem;color:#94a3b8">a</span>' +
-          '<input id="' + diFimId + '" type="number" min="1" max="31" value="' + esLastDay + '" style="width:38px;border:1px solid #c7d2fe;border-radius:4px;padding:.12rem .25rem;font-size:
+          '<input id="' + diFimId + '" type="number" min="1" max="31" value="' + esLastDay + '" style="width:38px;border:1px solid #c7d2fe;border-radius:4px;padding:.12rem .25rem;font-size:.68rem;text-align:center">' +
+          '<button id="' + btnId + '" onclick="liaSolicitarEsocial(' + empIdx + ',\'' + periodo + '\',\'' + diIniId + '\',\'' + diFimId + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .45rem;font-size:.68rem;cursor:pointer;font-weight:700">📥</button>' +
+          '</div>';
+      }
+      return '<button id="' + btnId + '" onclick="liaSolicitarUI(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:#6366f1;color:#fff;border:none;border-radius:6px;padding:.2rem .55rem;font-size:.68rem;cursor:pointer;white-space:nowrap;font-weight:700">📥 Solicitar</button>';
+    }
+    var st = lp.status || 'PENDENTE';
+
+    // Para ERRO: adapta a mensagem ao contexto do prazo
+    if (st === 'ERRO') {
+      var _PRAZO_DECLS = ['ecd','ecf','efd_contrib','efd_icms'];
+      var _temPrazo = _PRAZO_DECLS.indexOf(declId) !== -1;
+      var _prazoVenceu = !_temPrazo || empDeadlinePassou(declId, periodo);
+      var _erroLabel, _erroCor, _erroIc;
+      if (!_prazoVenceu) {
+        // Dentro do prazo — empresa ainda não entregou, normal
+        _erroLabel = 'Em prazo'; _erroCor = '#d97706'; _erroIc = '⏰';
+      } else {
+        // Prazo passou — SPED não encontrado na Receita Federal
+        _erroLabel = 'Não entregue'; _erroCor = '#ea580c'; _erroIc = '📭';
+      }
+      var _erroHtml = '<span style="font-size:.68rem;font-weight:700;color:' + _erroCor + ';white-space:nowrap" title="ReceitaNetBX não encontrou este arquivo na Receita Federal">' + _erroIc + ' ' + _erroLabel + '</span>';
+      _erroHtml += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + _erroCor + ';color:' + _erroCor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
+      _erroHtml += ' <button id="' + btnId + '" onclick="liaSolicitarUI(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" style="background:' + _erroCor + ';color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">↩ Retry</button>';
+      return _erroHtml;
+    }
+
+    var cores = {PENDENTE:'#6b7280',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b',CONCLUIDO:'#10b981'};
+    var ics   = {PENDENTE:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥',CONCLUIDO:'✅'};
+    var cor = cores[st] || '#6b7280';
+    var ic  = ics[st]  || '⏳';
+    var html = '<span style="font-size:.68rem;font-weight:700;color:' + cor + ';white-space:nowrap">' + ic + ' ' + st + '</span>';
+    if (st !== 'CONCLUIDO') {
+      html += ' <button onclick="liaRefresh(' + empIdx + ',\'' + declId + '\',\'' + periodo + '\')" title="Atualizar status" style="background:none;border:1.5px solid ' + cor + ';color:' + cor + ';border-radius:4px;padding:.1rem .35rem;font-size:.68rem;cursor:pointer;line-height:1">↻</button>';
+    }
+    if (st === 'CONCLUIDO' && lp.pedido_id) {
+      html += ' <button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\',' + empIdx + ')" title="Salvar arquivo no computador" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.1rem .4rem;font-size:.65rem;cursor:pointer">⬇️ Salvar</button>';
+    }
+    return html;
+  }
+
+  function liaRenderDashboard(root) {
+    var cfg = liaGetConfig();
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var emps = getEmpresas();
+    var vals = Object.values(pedidos);
+    var ativos = vals.filter(function(p){ return p.status && p.status !== 'CONCLUIDO' && p.status !== 'ERRO'; });
+    var concluidos = vals.filter(function(p){ return p.status === 'CONCLUIDO'; });
+    var erros = vals.filter(function(p){ return p.status === 'ERRO'; });
+
+    var h = '<hr style="border:none;border-top:2px solid #e0e7ff;margin:1.5rem 0">';
+    h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem">';
+    h += '<h3 style="margin:0;font-size:1rem;color:#1e1b4b;font-weight:700">📥 Downloads LIA (ReceitaNetBX)</h3>';
+    h += '<button onclick="_liaRefreshAll()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .85rem;font-size:.8rem;cursor:pointer;font-weight:700">↻ Atualizar todos</button>';
+    h += '</div>';
+
+    // Config collapsible
+    h += '<details style="background:#f8faff;border:2px solid #c7d2fe;border-radius:12px;padding:.85rem 1rem;margin-bottom:1rem">';
+    h += '<summary style="cursor:pointer;font-weight:700;color:#1e1b4b;font-size:.85rem">⚙️ Configurar API LIA</summary>';
+    h += '<div style="margin-top:.75rem;display:grid;grid-template-columns:1fr 1fr;gap:.5rem">';
+    h += '<div><label style="font-size:.73rem;color:#64748b">URL do servidor</label><br>';
+    h += '<input id="lia-cfg-url" value="' + (cfg.url || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '<div><label style="font-size:.73rem;color:#64748b">Usuário</label><br>';
+    h += '<input id="lia-cfg-user" value="' + (cfg.usuario || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '<div style="grid-column:1/-1"><label style="font-size:.73rem;color:#64748b">Senha</label><br>';
+    h += '<input id="lia-cfg-senha" type="password" value="' + (cfg.senha || '') + '" style="width:100%;border:1.5px solid #c7d2fe;border-radius:6px;padding:.35rem .6rem;font-size:.82rem;box-sizing:border-box;margin-top:.15rem"></div>';
+    h += '</div>';
+    h += '<div style="margin-top:.6rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">';
+    h += '<button onclick="_liaSaveCfg()" style="background:#6366f1;color:#fff;border:none;border-radius:8px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer;font-weight:700">💾 Salvar</button>';
+    h += '<button onclick="_liaTestConn()" style="background:#fff;color:#6366f1;border:2px solid #6366f1;border-radius:8px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer;font-weight:700">🔌 Testar conexão</button>';
+    h += '<span id="lia-test-result" style="font-size:.78rem"></span>';
+    h += '</div></details>';
+
+    // Stats
+    h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;margin-bottom:1rem">';
+    h += _liaStat('⚙️ Em andamento', ativos.length, '#3b82f6', '#eff6ff');
+    h += _liaStat('✅ Concluídos', concluidos.length, '#10b981', '#f0fdf4');
+    h += _liaStat('❌ Erros', erros.length, '#ef4444', '#fef2f2');
+    h += '</div>';
+
+    // Pedidos list
+    if (vals.length === 0) {
+      h += '<div style="text-align:center;padding:2rem;color:#94a3b8;font-size:.88rem;background:#f8faff;border-radius:12px">Nenhum pedido ainda. Use os botões <b>📥 Solicitar</b> no checklist de cada empresa.</div>';
+    } else {
+      var entries = Object.entries(pedidos).sort(function(a,b){ return (b[1].ts||0)-(a[1].ts||0); });
+      h += '<div style="display:flex;flex-direction:column;gap:.35rem">';
+      var STATUS_CORES = {PENDENTE:'#6b7280',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b',CONCLUIDO:'#10b981',ERRO:'#ef4444'};
+      var STATUS_ICS   = {PENDENTE:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥',CONCLUIDO:'✅',ERRO:'❌'};
+      entries.forEach(function(pair) {
+        var k = pair[0]; var pv = pair[1];
+        var kParts = k.split('_');
+        var cnpj = kParts[0]; var declId = kParts[1]; var per = kParts.slice(2).join('_');
+        var st = pv.status || 'PENDENTE';
+        var cor = STATUS_CORES[st] || '#6b7280';
+        var ic = STATUS_ICS[st] || '⏳';
+        var empLabel = '';
+        for (var ei = 0; ei < emps.length; ei++) {
+          if ((emps[ei].cnpj || '').replace(/\D/g,'') === cnpj) { empLabel = emps[ei].razao_social || cnpj; break; }
+        }
+        if (!empLabel) empLabel = cnpj;
+        var tipoLabel = LIA_TIPO_MAP[declId] || declId;
+        h += '<div style="background:#fff;border:1px solid #e0e7ff;border-radius:8px;padding:.45rem .75rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">';
+        h += '<span style="font-size:.72rem;color:#475569;flex:1;min-width:100px">' + esc(empLabel) + '</span>';
+        h += '<span style="font-size:.7rem;color:#6366f1;font-weight:600">' + tipoLabel + '</span>';
+        h += '<span style="font-size:.7rem;color:#64748b">' + per + '</span>';
+        if (pv.protocolo) h += '<span style="font-size:.67rem;color:#94a3b8">#' + pv.protocolo + '</span>';
+        h += '<span style="font-size:.7rem;font-weight:700;color:' + cor + '">' + ic + ' ' + st + '</span>';
+        if (st === 'CONCLUIDO' && pv.pedido_id) {
+          h += ' <button onclick="liaDownloadArquivo(\'' + pv.pedido_id + '\')" title="Baixar arquivo" style="background:#10b981;color:#fff;border:none;border-radius:5px;padding:.15rem .5rem;font-size:.68rem;cursor:pointer;font-weight:700">⬇️</button>';
+        }
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+
+    var div = document.createElement('div');
+    div.innerHTML = h;
+    root.appendChild(div);
+  }
+
+  function _liaStat(label, val, cor, bg) {
+    return '<div style="background:' + bg + ';border:1.5px solid ' + cor + '33;border-radius:10px;padding:.75rem 1rem;text-align:center">' +
+      '<div style="font-size:1.5rem;font-weight:800;color:' + cor + '">' + val + '</div>' +
+      '<div style="font-size:.72rem;color:#64748b;margin-top:.2rem">' + label + '</div>' +
+      '</div>';
+  }
+
+  function _liaSaveCfg() {
+    var url = (document.getElementById('lia-cfg-url') || {}).value || '';
+    var usuario = (document.getElementById('lia-cfg-user') || {}).value || '';
+    var senha = (document.getElementById('lia-cfg-senha') || {}).value || '';
+    liaSaveConfig({url: url.replace(/\/+$/, ''), usuario: usuario, senha: senha});
+    _liaToken = null; _liaTokenExp = 0;
+    var r = document.getElementById('lia-test-result');
+    if (r) { r.style.color = '#10b981'; r.textContent = '✅ Salvo!'; setTimeout(function(){ r.textContent = ''; }, 2000); }
+  }
+
+  async function liaDownloadArquivo(pedidoId, empIdx) {
+    var cfg = liaGetConfig();
+    try {
+      var token = await liaGetToken();
+      var r = await fetch(cfg.url + '/api/v1/pedidos/' + pedidoId + '/arquivo', {
+        headers: {'Authorization': 'Bearer ' + token}
+      });
+      if (!r.ok) throw new Error('Arquivo nao disponivel (status ' + r.status + '). Verifique se o pedido foi concluido no servidor.');
+      var blob = await r.blob();
+      var cd = r.headers.get('content-disposition') || '';
+      var fnMatch = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      var filename = fnMatch ? fnMatch[1].replace(/['"]/g, '') : ('sped_' + pedidoId + '.txt');
+      var pastaInfo = '';
+      if (empIdx !== undefined) {
+        var emps = getEmpresas();
+        var emp = emps[empIdx];
+        if (emp && emp.pasta_local) pastaInfo = ' | Pasta: ' + emp.pasta_local;
+      }
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename; a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+      showToast('Arquivo baixado: ' + filename + pastaInfo, '#10b981');
+    } catch(e) {
+      alert('Erro ao baixar arquivo: ' + e.message);
+    }
+  }
+
+  async function _liaTestConn() {
+    var r = document.getElementById('lia-test-result');
+    if (r) { r.style.color = '#6366f1'; r.textContent = '🔌 Testando…'; }
+    try {
+      _liaToken = null; _liaTokenExp = 0;
+      await liaGetToken();
+      if (r) { r.style.color = '#10b981'; r.textContent = '✅ Conectado!'; }
+    } catch(e) {
+      if (r) { r.style.color = '#ef4444'; r.textContent = '❌ ' + e.message; }
+    }
+  }
+
+  // ── LIA SELECT MODAL ─────────────────────────────────────────────────
+  var _liaSelectEmpIdx = -1;
+
+  function empAbrirLiaSelect(empIdx) {
+    var cfg = liaGetConfig();
+    if (!cfg.senha) {
+      if (confirm('Configure a senha da LIA primeiro.\nAbrir Inteligência > Configurar API LIA agora?')) navTo('inteligencia', null);
+      return;
+    }
+    _liaSelectEmpIdx = empIdx;
+    var emp = getEmpresas()[empIdx];
+    if (!emp) return;
+
+    var decls = (emp.declaracoes || []).filter(function(d) {
+      return d.ativo && (d.controle || 'lia') === 'lia' && LIA_TIPO_MAP[d.id];
+    });
+    if (!decls.length) {
+      alert('Esta empresa não tem declarações LIA configuradas (EFD ICMS/IPI, EFD Contribuições, ECD ou ECF ativas).');
+      return;
+    }
+
+    var nameEl = document.getElementById('lia-select-empresa-name');
+    if (nameEl) nameEl.textContent = emp.razao_social || emp.cnpj;
+
+    var declsEl = document.getElementById('lia-select-decls');
+    if (declsEl) {
+      declsEl.innerHTML = decls.map(function(d) {
+        return '<label style="display:flex;align-items:center;gap:.6rem;padding:.5rem .75rem;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;background:var(--bg);user-select:none">' +
+          '<input type="checkbox" checked class="lia-sel-decl" data-decl-id="' + d.id + '" onchange="liaSelectUpdatePreview()" style="accent-color:var(--primary);width:15px;height:15px;flex-shrink:0">' +
+          '<span style="font-size:.82rem">' + (d.icon||'📄') + ' <strong>' + esc(d.label) + '</strong></span>' +
+          '</label>';
+      }).join('');
+    }
+
+    // Reset to "12 meses"
+    var radios = document.querySelectorAll('input[name="lia-period-range"]');
+    radios.forEach(function(r) { r.checked = r.value === '12'; });
+    var customDiv = document.getElementById('lia-period-custom');
+    if (customDiv) customDiv.style.display = 'none';
+
+    liaSelectUpdatePreview();
+    var modal = document.getElementById('lia-select-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function liaSelectUpdatePreview() {
+    var radios = document.querySelectorAll('input[name="lia-period-range"]');
+    var rangeVal = '12';
+    radios.forEach(function(r) { if (r.checked) rangeVal = r.value; });
+
+    var customDiv = document.getElementById('lia-period-custom');
+    if (customDiv) customDiv.style.display = rangeVal === 'custom' ? 'grid' : 'none';
+
+    if (_liaSelectEmpIdx < 0) return;
+    var emp = getEmpresas()[_liaSelectEmpIdx];
+    if (!emp) return;
+
+    var selectedDecls = Array.from(document.querySelectorAll('.lia-sel-decl:checked')).map(function(el) { return el.dataset.declId; });
+    var allPeriods = _liaCalcPeriods(emp, selectedDecls, rangeVal);
+    var total = Object.values(allPeriods).reduce(function(s, a) { return s + a.length; }, 0);
+
+    var previewEl = document.getElementById('lia-select-preview');
+    if (previewEl) previewEl.textContent = total + ' período(s) em ' + selectedDecls.length + ' declaração(ões)';
+
+    var btn = document.getElementById('lia-select-confirm-btn');
+    if (btn) {
+      btn.textContent = '📥 Solicitar ' + total + ' download(s)';
+      btn.disabled = total === 0;
+    }
+  }
+
+  function _liaCalcPeriods(emp, selectedDeclIds, rangeVal) {
+    var result = {};
+    var decls = (emp.declaracoes || []).filter(function(d) {
+      return d.ativo && selectedDeclIds.indexOf(d.id) !== -1 && LIA_TIPO_MAP[d.id];
+    });
+    decls.forEach(function(d) {
+      var configured = empGetPeriods(d);
+      var rangeSet;
+      if (rangeVal === 'custom') {
+        var ini = ((document.getElementById('lia-custom-inicio') || {}).value || '').trim();
+        var fim = ((document.getElementById('lia-custom-fim') || {}).value || '').trim();
+        rangeSet = _liaGenCustomRange(d, ini, fim);
+      } else {
+        rangeSet = _liaGenRange(d, parseInt(rangeVal) || 12);
+      }
+      var idx = {}; rangeSet.forEach(function(p) { idx[p] = true; });
+      result[d.id] = configured.filter(function(p) { return idx[p]; });
+    });
+    return result;
+  }
+
+  function _liaGenRange(decl, meses) {
+    var isAnual = decl.id === 'ecd' || decl.id === 'ecf';
+    var now = new Date(); var result = [];
+    if (isAnual) {
+      var anos = Math.max(1, Math.ceil(meses / 12));
+      for (var i = anos; i >= 1; i--) result.push(String(now.getFullYear() - i));
+    } else {
+      for (var i = meses; i >= 1; i--) {
+        var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        result.push(String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear());
+      }
+    }
+    return result;
+  }
+
+  function _liaGenCustomRange(decl, ini, fim) {
+    if (!ini || !fim) return [];
+    var isAnual = decl.id === 'ecd' || decl.id === 'ecf';
+    var result = [];
+    if (isAnual) {
+      var yI = parseInt(ini.split('/').pop()); var yF = parseInt(fim.split('/').pop());
+      if (!yI || !yF) return [];
+      for (var y = yI; y <= yF && result.length < 60; y++) result.push(String(y));
+    } else {
+      var pI = ini.split('/'); var pF = fim.split('/');
+      var mI = parseInt(pI[0]); var yI = parseInt(pI[1]);
+      var mF = parseInt(pF[0]); var yF = parseInt(pF[1]);
+      if (!mI || !yI || !mF || !yF) return [];
+      var safety = 0;
+      while ((yI < yF || (yI === yF && mI <= mF)) && safety++ < 200) {
+        result.push(String(mI).padStart(2,'0') + '/' + yI);
+        if (++mI > 12) { mI = 1; yI++; }
+      }
+    }
+    return result;
+  }
+
+  async function empConfirmarLiaSelect() {
+    if (_liaSelectEmpIdx < 0) return;
+    var emp = getEmpresas()[_liaSelectEmpIdx];
+    if (!emp) return;
+
+    var radios = document.querySelectorAll('input[name="lia-period-range"]');
+    var rangeVal = '12';
+    radios.forEach(function(r) { if (r.checked) rangeVal = r.value; });
+
+    var selectedDecls = Array.from(document.querySelectorAll('.lia-sel-decl:checked')).map(function(el) { return el.dataset.declId; });
+    var allPeriods = _liaCalcPeriods(emp, selectedDecls, rangeVal);
+    var total = Object.values(allPeriods).reduce(function(s, a) { return s + a.length; }, 0);
+    if (!total) { alert('Nenhum período disponível para a seleção feita.'); return; }
+
+    document.getElementById('lia-select-modal').style.display = 'none';
+    empAbrirChecklist(_liaSelectEmpIdx);
+
+    var cnt = 0; var errs = 0; var abortado = false;
+    var cnpj14 = (emp.cnpj || '').replace(/\D/g, '');
+    var declIds = Object.keys(allPeriods);
+    outer: for (var i = 0; i < declIds.length; i++) {
+      var declId = declIds[i];
+      var periods = allPeriods[declId];
+      for (var j = 0; j < periods.length; j++) {
+        var p = periods[j];
+        var key = cnpj14 + '_' + declId + '_' + p;
+        var existing = ls('jdc_lia_pedidos', {});
+        if (!existing[key] || existing[key].status === 'ERRO') {
+          try {
+            await liaSolicitar(_liaSelectEmpIdx, declId, p);
+            cnt++;
+          } catch(e) {
+            var msg = e.message || String(e);
+            // Erro de rede: para o lote inteiro, avisa uma vez
+            if (msg.includes('fetch') || msg.includes('Failed') || msg.includes('network')) {
+              abortado = true;
+              break outer;
+            }
+            errs++;
+            console.warn('liaSelect:', msg);
+          }
+        }
+      }
+    }
+    if (abortado) {
+      showToast('❌ Servidor inacessível (' + cnt + ' enviado(s) antes da falha). Verifique a VM e tente novamente.', '#ef4444');
+    } else {
+      showToast(cnt + ' pedido(s) enviados' + (errs ? ' · ' + errs + ' erro(s)' : '') + '!', cnt ? '#10b981' : '#ef4444');
+    }
+    liaDownloadBarShow();
+    empRenderChecklist();
+  }
+
+  // ── BARRA DE DOWNLOADS ────────────────────────────────────────────────
+  var _DECL_LABELS = { efd_icms: 'EFD ICMS', efd_contrib: 'EFD Contrib', ecd: 'ECD', ecf: 'ECF' };
+
+  function liaDownloadBarUpdate() {
+    var bar = document.getElementById('lia-download-bar');
+    if (!bar) return;
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var emps = getEmpresas();
+    var entries = Object.entries(pedidos);
+    if (!entries.length) { bar.style.display = 'none'; return; }
+
+    bar.style.display = '';
+
+    var ativos  = entries.filter(function(e) { var s = e[1].status; return s !== 'CONCLUIDO' && s !== 'ERRO'; });
+    var conc    = entries.filter(function(e) { return e[1].status === 'CONCLUIDO'; });
+    var erros   = entries.filter(function(e) { return e[1].status === 'ERRO'; });
+
+    var summaryEl = document.getElementById('lia-dlbar-summary');
+    if (summaryEl) {
+      var parts = [];
+      if (ativos.length) parts.push(ativos.length + ' ativo(s)');
+      if (conc.length)   parts.push('✅ ' + conc.length);
+      if (erros.length)  parts.push('❌ ' + erros.length);
+      summaryEl.textContent = parts.join(' · ');
+    }
+
+    // Mini chips — ativos primeiro, depois erros, depois últimos 5 concluídos
+    var itemsEl = document.getElementById('lia-dlbar-items');
+    if (itemsEl) {
+      var visible = ativos.concat(erros).concat(conc.slice(-5));
+      itemsEl.innerHTML = visible.slice(0, 25).map(function(entry) {
+        var key = entry[0]; var pv = entry[1];
+        var parts2 = key.split('_');
+        var cnpj = parts2[0]; var declId = parts2[1]; var per = parts2.slice(2).join('_');
+        var empName = cnpj;
+        for (var i = 0; i < emps.length; i++) {
+          if ((emps[i].cnpj || '').replace(/\D/g,'') === cnpj) {
+            empName = (emps[i].razao_social || emps[i].cnpj || '').split(' ')[0]; break;
+          }
+        }
+        var status = pv.status || 'AGUARDANDO';
+        var icon  = { CONCLUIDO: '✅', ERRO: '❌', PROCESSANDO: '⏳', AGUARDANDO: '🕐' }[status] || '🕐';
+        var color = { CONCLUIDO: '#10b981', ERRO: '#ef4444', PROCESSANDO: '#f59e0b', AGUARDANDO: '#818cf8' }[status] || '#818cf8';
+        var prog  = pv.progresso;
+        var label = (_DECL_LABELS[declId] || declId);
+        var progBar = (status === 'PROCESSANDO' && prog !== undefined)
+          ? '<div style="height:3px;background:#312e7f;border-radius:2px;margin-top:3px"><div style="height:100%;width:' + prog + '%;background:' + color + ';border-radius:2px;transition:width .5s"></div></div>'
+          + '<div style="font-size:.58rem;color:' + color + ';margin-top:1px">' + prog + '%</div>'
+          : '';
+        return '<div style="flex-shrink:0;background:#26237a;border:1px solid #312e7f;border-radius:8px;padding:.28rem .55rem;min-width:130px;max-width:190px" title="' + key + '">'
+          + '<div style="display:flex;align-items:center;gap:.3rem">'
+          + '<span style="color:' + color + ';font-size:.82rem">' + icon + '</span>'
+          + '<span style="font-size:.66rem;color:#c7d2fe;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + empName + ' · ' + label + ' · ' + per + '</span>'
+          + '</div>' + progBar + '</div>';
+      }).join('');
+    }
+
+    // Update expanded panel if visible
+    var expEl = document.getElementById('lia-dlbar-expanded');
+    if (expEl && expEl.style.display !== 'none') liaDownloadBarRenderExpanded(entries, emps);
+  }
+
+  function liaDownloadBarRenderExpanded(entries, emps) {
+    var expEl = document.getElementById('lia-dlbar-expanded');
+    if (!expEl) return;
+    if (!emps)    emps    = getEmpresas();
+    if (!entries) entries = Object.entries(ls('jdc_lia_pedidos', {}));
+
+    var groups = {};
+    entries.forEach(function(e) {
+      var cnpj = e[0].split('_')[0];
+      (groups[cnpj] = groups[cnpj] || []).push(e);
+    });
+
+    var html = Object.keys(groups).map(function(cnpj) {
+      var empName = cnpj;
+      for (var i = 0; i < emps.length; i++) {
+        if ((emps[i].cnpj || '').replace(/\D/g,'') === cnpj) { empName = emps[i].razao_social || emps[i].cnpj || cnpj; break; }
+      }
+      var rows = groups[cnpj].map(function(entry) {
+        var kp = entry[0].split('_'); var pv = entry[1];
+        var declId = kp[1]; var per = kp.slice(2).join('_');
+        var status = pv.status || 'AGUARDANDO';
+        var icon   = { CONCLUIDO: '✅', ERRO: '❌', PROCESSANDO: '⏳', AGUARDANDO: '🕐' }[status] || '🕐';
+        var prog   = (pv.progresso !== undefined) ? ' · ' + pv.progresso + '%' : '';
+        return '<div style="display:flex;align-items:center;gap:.6rem;padding:.2rem 0;border-bottom:1px solid #26237a;font-size:.71rem">'
+          + '<span style="flex-shrink:0">' + icon + '</span>'
+          + '<span style="color:#a5b4fc;min-width:80px;flex-shrink:0">' + (_DECL_LABELS[declId] || declId) + '</span>'
+          + '<span style="color:#c7d2fe;min-width:65px;flex-shrink:0">' + per + '</span>'
+          + '<span style="color:#818cf8;flex:1">' + status + prog + '</span>'
+          + (pv.protocolo ? '<span style="color:#6366f1;font-size:.62rem">' + pv.protocolo + '</span>' : '')
+          + '</div>';
+      }).join('');
+      return '<div style="margin-bottom:.7rem"><div style="font-size:.71rem;font-weight:700;color:#a5b4fc;margin-bottom:.25rem">' + empName + '</div>' + rows + '</div>';
+    }).join('');
+
+    expEl.innerHTML = html || '<div style="font-size:.75rem;color:#818cf8;text-align:center;padding:.5rem">Nenhum pedido registrado</div>';
+  }
+
+  function liaDownloadBarShow() {
+    liaDownloadBarUpdate();
+  }
+
+  function liaDownloadBarClose() {
+    var bar = document.getElementById('lia-download-bar');
+    if (bar) bar.style.display = 'none';
+  }
+
+  function liaDownloadBarToggleExpanded() {
+    var exp = document.getElementById('lia-dlbar-expanded');
+    var btn = document.getElementById('lia-dlbar-toggle-btn');
+    if (!exp) return;
+    var expanding = exp.style.display === 'none' || exp.style.display === '';
+    // first render sets display to '' (visible by default none in HTML)
+    var isNone = !exp.style.display || exp.style.display === 'none';
+    exp.style.display = isNone ? '' : 'none';
+    if (btn) btn.textContent = isNone ? '⬇' : '⬆';
+    if (isNone) liaDownloadBarRenderExpanded();
+  }
+
+  // ── REFRESH ALL + POLLING ─────────────────────────────────────────────
+  async function _liaRefreshAll() {
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var entries = Object.entries(pedidos);
+    var emps = getEmpresas();
+    for (var i = 0; i < entries.length; i++) {
+      var k = entries[i][0]; var pv = entries[i][1];
+      if (pv.status === 'CONCLUIDO' || pv.status === 'ERRO') continue;
+      var kParts = k.split('_');
+      var cnpj = kParts[0]; var declId = kParts[1]; var per = kParts.slice(2).join('_');
+      var empIdx = -1;
+      for (var ei = 0; ei < emps.length; ei++) {
+        if ((emps[ei].cnpj || '').replace(/\D/g,'') === cnpj) { empIdx = ei; break; }
+      }
+      if (empIdx >= 0) {
+        try { await liaRefresh(empIdx, declId, per); } catch(e) { console.warn('_liaRefreshAll:', e); }
+      }
+    }
+    liaDownloadBarUpdate();
+    renderInteligencia();
+  }
+
+  // Auto-poll a cada 8 segundos enquanto há pedidos ativos
+  setInterval(function() {
+    var pedidos = ls('jdc_lia_pedidos', {});
+    var temAtivos = Object.values(pedidos).some(function(p) {
+      return p.status !== 'CONCLUIDO' && p.status !== 'ERRO';
+    });
+    if (temAtivos) _liaRefreshAll();
+    else liaDownloadBarUpdate(); // atualiza o resumo mesmo sem ativos
+  }, 8000);
+
+
+</script>
+
+<!-- ─── BARRA DE DOWNLOADS LIA ─── -->
+<div id="lia-download-bar" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9998;background:#18164b;color:#e0e7ff;box-shadow:0 -3px 20px rgba(0,0,0,.4);font-family:inherit">
+  <div style="display:flex;align-items:center;padding:.4rem .9rem;gap:.6rem;min-height:46px">
+    <span style="white-space:nowrap;font-size:.75rem;font-weight:700;color:#a5b4fc;flex-shrink:0">📥 Downloads LIA</span>
+    <div id="lia-dlbar-items" style="display:flex;gap:.35rem;flex:1;overflow-x:auto;overflow-y:hidden;padding:.15rem 0;scrollbar-width:thin;scrollbar-color:#312e7f #18164b"></div>
+    <div style="display:flex;align-items:center;gap:.35rem;flex-shrink:0">
+      <span id="lia-dlbar-summary" style="font-size:.68rem;color:#818cf8;white-space:nowrap"></span>
+      <button onclick="liaDownloadBarToggleExpanded()" id="lia-dlbar-toggle-btn" title="Ver lista completa" style="background:#312e7f;color:#e0e7ff;border:none;border-radius:6px;padding:.22rem .5rem;font-size:.72rem;cursor:pointer">⬆</button>
+      <button onclick="liaDownloadBarClose()" title="Fechar barra" style="background:#312e7f;color:#e0e7ff;border:none;border-radius:6px;padding:.22rem .5rem;font-size:.72rem;cursor:pointer">✕</button>
+    </div>
+  </div>
+  <div id="lia-dlbar-expanded" style="display:none;max-height:220px;overflow-y:auto;border-top:1px solid #312e7f;padding:.55rem .9rem;background:#1e1b4b"></div>
+</div>
+
+</body>
+</html>
