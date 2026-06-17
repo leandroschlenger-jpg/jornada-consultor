@@ -528,17 +528,14 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       <button class="nav-link active" data-page="welcome" onclick="navTo('welcome',this)">
         <span class="nav-icon">🏠</span> Dashboard
       </button>
-      <button class="nav-link" data-page="esocial-suporte" onclick="navTo('esocial-suporte',this)">
-        <span class="nav-icon">📋</span> eSocial
-      </button>
       <button class="nav-link" data-page="lia" onclick="navTo('lia',this)">
         <span class="nav-icon">🤖</span> Auxiliares
       </button>
       <button class="nav-link" data-page="empresas" onclick="navTo('empresas',this)">
-        <span class="nav-icon">🏢</span> Empresas
+        <span class="nav-icon">🗂️</span> 1) Fluxo de documentos
       </button>
       <button class="nav-link" data-page="inteligencia" onclick="navTo('inteligencia',this)">
-        <span class="nav-icon">🧠</span> Inteligência
+        <span class="nav-icon">👁️</span> 2) Visibilidade
       </button>
       <button class="nav-link hidden" id="nav-admin" data-page="admin" onclick="navTo('admin',this)">
         <span class="nav-icon">⚙️</span> Admin
@@ -804,7 +801,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       <div class="pg-header">
         <div class="pg-header-top">
           <div>
-            <div class="pg-title">🏢 Empresas</div>
+            <div class="pg-title">🗂️ 1) Fluxo de documentos</div>
             <div class="pg-subtitle">Carteira de clientes, declarações e checklist de downloads</div>
           </div>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
@@ -831,7 +828,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       <div class="pg-header">
         <div class="pg-header-top">
           <div>
-            <div class="pg-title">🧠 Inteligência Fiscal</div>
+            <div class="pg-title">👁️ 2) Visibilidade</div>
             <div class="pg-subtitle">Módulos de análise e cruzamento SPED</div>
           </div>
           <input class="input" id="intel-search" placeholder="🔍  Buscar módulo..." oninput="renderInteligencia()" style="width:220px;font-size:.82rem">
@@ -1492,7 +1489,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.5.4';
+const APP_VERSION = '1.5.6';
 const APP_BUILD   = '2026-06-16';
 
 // STORAGE HELPERS
@@ -8120,7 +8117,7 @@ function empCard(e, i) {
     <!-- Actions -->
     <div style="display:flex;gap:.5rem;margin-top:.25rem;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" style="flex:1" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
-      <button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;font-size:.75rem;padding:.35rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect(${i})" title="Solicitar download LIA — selecionar declarações e período">📥 Baixar LIA</button>
+      ${getSession().admin ? `<button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;font-size:.75rem;padding:.35rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect(${i})" title="Solicitar download LIA — selecionar declarações e período">📥 Baixar LIA</button>` : ''}
     </div>
   </div>`;
 }
@@ -8170,8 +8167,8 @@ function empRenderChecklist() {
   const allLiaPedidos = ls('jdc_lia_pedidos', {});
 
   const toolbar = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);flex-wrap:wrap">
-    <button onclick="empAbrirLiaSelect(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
-    <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>
+    ${getSession().admin ? `<button onclick="empAbrirLiaSelect(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
+    <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>` : ''}
     <div style="flex:1"></div>
     <button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>
   </div>`;
