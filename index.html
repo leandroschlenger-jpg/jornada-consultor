@@ -532,10 +532,10 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
         <span class="nav-icon">🤖</span> Auxiliares
       </button>
       <button class="nav-link" data-page="empresas" onclick="navTo('empresas',this)">
-        <span class="nav-icon">🗂️</span> 1) Fluxo de documentos
+        <span class="nav-icon">🗂️</span> Fluxo de documentos
       </button>
       <button class="nav-link" data-page="inteligencia" onclick="navTo('inteligencia',this)">
-        <span class="nav-icon">👁️</span> 2) Visibilidade
+        <span class="nav-icon">🧠</span> Visibilidade
       </button>
       <button class="nav-link hidden" id="nav-admin" data-page="admin" onclick="navTo('admin',this)">
         <span class="nav-icon">⚙️</span> Admin
@@ -801,7 +801,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       <div class="pg-header">
         <div class="pg-header-top">
           <div>
-            <div class="pg-title">🗂️ 1) Fluxo de documentos</div>
+            <div class="pg-title">🗂️ Fluxo de documentos</div>
             <div class="pg-subtitle">Carteira de clientes, declarações e checklist de downloads</div>
           </div>
           <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
@@ -812,11 +812,19 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       </div>
 
       <!-- Summary bar -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.5rem" id="emp-summary-bar">
-        <div class="bn-card"><div class="bn-card-icon">🏢</div><div class="bn-card-val" id="emp-stat-total">—</div><div class="bn-card-lbl">Empresas</div></div>
-        <div class="bn-card"><div class="bn-card-icon">✅</div><div class="bn-card-val" id="emp-stat-ok">—</div><div class="bn-card-lbl">Declarações OK</div></div>
-        <div class="bn-card"><div class="bn-card-icon">⏳</div><div class="bn-card-val" id="emp-stat-pend">—</div><div class="bn-card-lbl">Pendentes</div></div>
-        <div class="bn-card"><div class="bn-card-icon">📊</div><div class="bn-card-val" id="emp-stat-decls">—</div><div class="bn-card-lbl">Tipos Configurados</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1rem" id="emp-summary-bar">
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('download')" id="fase-card-download"><div class="bn-card-icon">📥</div><div class="bn-card-val" id="emp-stat-download">—</div><div class="bn-card-lbl">Download</div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('conferencia')" id="fase-card-conferencia"><div class="bn-card-icon">🔍</div><div class="bn-card-val" id="emp-stat-conferencia">—</div><div class="bn-card-lbl">Conferência</div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('liberados')" id="fase-card-liberados"><div class="bn-card-icon">✅</div><div class="bn-card-val" id="emp-stat-liberados">—</div><div class="bn-card-lbl">Liberados</div></div>
+        <div class="bn-card" style="cursor:pointer" onclick="setFaseFilter('')" id="fase-card-total"><div class="bn-card-icon">📊</div><div class="bn-card-val" id="emp-stat-total-geral">—</div><div class="bn-card-lbl">Total geral</div></div>
+      </div>
+      <!-- Filtros de fase -->
+      <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+        <span style="font-size:.72rem;color:var(--text3);font-weight:600">Filtrar:</span>
+        <button id="filtro-btn-all" onclick="setFaseFilter('')" style="padding:.25rem .7rem;border-radius:99px;border:1.5px solid var(--primary);background:var(--primary);color:#fff;font-size:.72rem;cursor:pointer;font-weight:600">Todas</button>
+        <button id="filtro-btn-download" onclick="setFaseFilter('download')" style="padding:.25rem .7rem;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:.72rem;cursor:pointer">📥 Download</button>
+        <button id="filtro-btn-conferencia" onclick="setFaseFilter('conferencia')" style="padding:.25rem .7rem;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:.72rem;cursor:pointer">🔍 Conferência</button>
+        <button id="filtro-btn-liberados" onclick="setFaseFilter('liberados')" style="padding:.25rem .7rem;border-radius:99px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:.72rem;cursor:pointer">✅ Liberados</button>
       </div>
 
       <!-- Grid de empresas -->
@@ -828,7 +836,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
       <div class="pg-header">
         <div class="pg-header-top">
           <div>
-            <div class="pg-title">👁️ 2) Visibilidade</div>
+            <div class="pg-title">🧠 Visibilidade</div>
             <div class="pg-subtitle">Módulos de análise e cruzamento SPED</div>
           </div>
           <input class="input" id="intel-search" placeholder="🔍  Buscar módulo..." oninput="renderInteligencia()" style="width:220px;font-size:.82rem">
@@ -850,6 +858,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
             <div class="admin-nav">
               <button class="admin-nav-item active" onclick="setAdminTab('users',this)">👥 Usuários</button>
               <button class="admin-nav-item" onclick="setAdminTab('lia',this)">📥 Downloads LIA</button>
+              <button class="admin-nav-item" onclick="setAdminTab('changelog',this)">📚 Changelog</button>
               <button class="admin-nav-item" onclick="setAdminTab('tasks',this)">✅ Config. Tarefas</button>
               <button class="admin-nav-item" onclick="setAdminTab('log',this)">📋 Log de Atividades</button>
               <button class="admin-nav-item" onclick="setAdminTab('ranking',this)">🏆 Ranking</button>
@@ -868,6 +877,22 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
             <div class="card" style="overflow:auto">
               <div id="admin-users-table"></div>
             </div>
+          </div>
+
+          <!-- CHANGELOG -->
+          <div class="admin-section" id="admin-sec-changelog">
+            <div class="row-between" style="margin-bottom:1rem">
+              <h3>📚 Changelog — Histórico de Versões</h3>
+            </div>
+            <div class="card card-pad" style="margin-bottom:1rem">
+              <div style="display:grid;grid-template-columns:120px 1fr;gap:.5rem;margin-bottom:.5rem">
+                <div><label style="font-size:.72rem;color:var(--text3)">Versão</label><input id="cl-ver" class="input" placeholder="Ex: 1.5.8" style="margin-top:.2rem"></div>
+                <div><label style="font-size:.72rem;color:var(--text3)">Data</label><input id="cl-data" type="date" class="input" style="margin-top:.2rem"></div>
+              </div>
+              <div style="margin-bottom:.5rem"><label style="font-size:.72rem;color:var(--text3)">Descrição das mudanças</label><textarea id="cl-desc" class="input" rows="3" placeholder="Descreva o que mudou nesta versão..." style="width:100%;margin-top:.2rem;box-sizing:border-box;resize:vertical"></textarea></div>
+              <button class="btn btn-primary btn-sm" onclick="changelogSalvar()">💾 Salvar entrada</button>
+            </div>
+            <div id="changelog-list"></div>
           </div>
 
           <!-- DOWNLOADS LIA -->
@@ -1302,6 +1327,16 @@ window.jdcRobo.esocial.getAllParaDownload();</pre>
             <span style="font-size:.78rem;color:var(--text2);font-weight:600">📊 Total de pedidos:</span>
             <span id="lia-select-preview" style="font-size:.84rem;font-weight:700;color:var(--primary)">—</span>
           </div>
+          <div style="margin-bottom:1rem">
+            <div style="font-size:.76rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.4rem">📁 Salvar localmente</div>
+            <label style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text2);margin-bottom:.4rem;cursor:pointer">
+              <input type="checkbox" id="lia-sem-pasta-local" onchange="document.getElementById('lia-pasta-local-row').style.display=this.checked?'none':''" style="accent-color:var(--primary)"> Não salvar localmente (manter só na VM)
+            </label>
+            <div id="lia-pasta-local-row">
+              <input type="text" id="lia-pasta-local" placeholder="Ex: C:\Users\leandro.falco\Documents\SPED" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:.35rem .6rem;font-size:.8rem;box-sizing:border-box;background:var(--surface)">
+              <div style="font-size:.68rem;color:var(--text3);margin-top:.2rem">Deixe em branco para usar a pasta padrão da empresa ou da VM.</div>
+            </div>
+          </div>
           <div style="display:flex;gap:.6rem;justify-content:flex-end">
             <button onclick="document.getElementById('lia-select-modal').style.display='none'" style="padding:.45rem 1rem;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);font-size:.82rem;cursor:pointer;font-weight:600">Cancelar</button>
             <button id="lia-select-confirm-btn" onclick="empConfirmarLiaSelect()" style="padding:.45rem 1.25rem;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
@@ -1495,7 +1530,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.5.7';
+const APP_VERSION = '1.5.9';
 const APP_BUILD   = '2026-06-16';
 
 // STORAGE HELPERS
@@ -5451,9 +5486,49 @@ function setAdminTab(tab, btn) {
   if (btn) btn.classList.add('active');
   if (tab === 'users') renderAdminUsers();
   if (tab === 'lia') renderAdminLia();
+  if (tab === 'changelog') renderChangelog();
   if (tab === 'tasks') renderTaskConfig();
   if (tab === 'log') renderActivityLog();
   if (tab === 'ranking') renderRanking('geral');
+}
+
+function changelogSalvar() {
+  var ver  = (document.getElementById('cl-ver')  || {}).value || '';
+  var data = (document.getElementById('cl-data') || {}).value || '';
+  var desc = (document.getElementById('cl-desc') || {}).value || '';
+  if (!ver || !desc) { showToast('Preencha versão e descrição.', '#ef4444'); return; }
+  var log = ls('jdc_changelog', []);
+  log.unshift({ ver: ver.trim(), data: data || new Date().toISOString().slice(0,10), desc: desc.trim(), ts: Date.now() });
+  lsSave('jdc_changelog', log);
+  if (document.getElementById('cl-ver'))  document.getElementById('cl-ver').value  = '';
+  if (document.getElementById('cl-desc')) document.getElementById('cl-desc').value = '';
+  showToast('Entrada salva!', '#10b981');
+  renderChangelog();
+}
+
+function changelogDeletar(idx) {
+  if (!confirm('Remover esta entrada do changelog?')) return;
+  var log = ls('jdc_changelog', []);
+  log.splice(idx, 1);
+  lsSave('jdc_changelog', log);
+  renderChangelog();
+}
+
+function renderChangelog() {
+  var el = document.getElementById('changelog-list');
+  if (!el) return;
+  var log = ls('jdc_changelog', []);
+  if (!log.length) { el.innerHTML = '<div style="color:var(--text3);font-size:.85rem;padding:.75rem 0">Nenhuma entrada ainda. Adicione a primeira acima.</div>'; return; }
+  el.innerHTML = log.map(function(e, i) {
+    return '<div class="card card-pad" style="margin-bottom:.6rem">' +
+      '<div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.35rem">' +
+      '<span style="font-size:.82rem;font-weight:800;color:var(--primary)">v' + esc(e.ver) + '</span>' +
+      '<span style="font-size:.72rem;color:var(--text3)">' + esc(e.data) + '</span>' +
+      '<button onclick="changelogDeletar(' + i + ')" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:.75rem" title="Remover">✕</button>' +
+      '</div>' +
+      '<div style="font-size:.8rem;color:var(--text2);white-space:pre-wrap">' + esc(e.desc) + '</div>' +
+      '</div>';
+  }).join('');
 }
 
 function renderAdminLia() {
@@ -7971,6 +8046,41 @@ function empSalvar() {
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────
+var _empFaseFilter = '';
+function setFaseFilter(fase) {
+  _empFaseFilter = fase;
+  // Atualiza visual dos botões de filtro
+  const btns = {''       : 'filtro-btn-all',
+                'download'   : 'filtro-btn-download',
+                'conferencia': 'filtro-btn-conferencia',
+                'liberados'  : 'filtro-btn-liberados'};
+  Object.keys(btns).forEach(k => {
+    const b = document.getElementById(btns[k]);
+    if (!b) return;
+    if (k === fase) {
+      b.style.background = 'var(--primary)'; b.style.color = '#fff'; b.style.borderColor = 'var(--primary)';
+    } else {
+      b.style.background = 'var(--surface)'; b.style.color = 'var(--text2)'; b.style.borderColor = 'var(--border)';
+    }
+  });
+  renderEmpresas();
+}
+
+function _empFaseMatch(e, fase) {
+  if (!fase) return true;
+  const ativos = (e.declaracoes||[]).filter(d=>d.ativo);
+  const cl = e.checklist || {};
+  for (const d of ativos) {
+    for (const p of empGetPeriods(d)) {
+      const s = (cl[d.id]&&cl[d.id][p]) || {};
+      if (fase === 'liberados'   && s.conferido) return true;
+      if (fase === 'conferencia' && s.baixado && !s.conferido) return true;
+      if (fase === 'download'    && !s.baixado) return true;
+    }
+  }
+  return false;
+}
+
 function renderEmpresas() {
   const el = document.getElementById('emp-grid-main');
   if (!el) return;
@@ -7982,6 +8092,7 @@ function renderEmpresas() {
     (e.cnpj||'').includes(q) ||
     (e.municipio||'').toLowerCase().includes(q)
   );
+  if (_empFaseFilter) emps = emps.filter(e => _empFaseMatch(e, _empFaseFilter));
 
   // Update summary
   const all = getEmpresas();
@@ -7998,11 +8109,25 @@ function renderEmpresas() {
       });
     });
   });
+  let liberados = 0, conferencia = 0, download = 0;
+  all.forEach(e => {
+    const ativos2 = (e.declaracoes||[]).filter(d=>d.ativo);
+    ativos2.forEach(d => {
+      const cl2 = e.checklist || {};
+      const periods2 = empGetPeriods(d);
+      periods2.forEach(p => {
+        const s2 = (cl2[d.id]&&cl2[d.id][p]) || {};
+        if (s2.conferido) liberados++;
+        else if (s2.baixado) conferencia++;
+        else download++;
+      });
+    });
+  });
   const set = (id, v) => { const el2 = document.getElementById(id); if (el2) el2.textContent = v; };
-  set('emp-stat-total', all.length);
-  set('emp-stat-ok', okDecls);
-  set('emp-stat-pend', pendDecls);
-  set('emp-stat-decls', totalDecls);
+  set('emp-stat-download', download);
+  set('emp-stat-conferencia', conferencia);
+  set('emp-stat-liberados', liberados);
+  set('emp-stat-total-geral', download + conferencia + liberados);
 
   if (!emps.length) {
     el.innerHTML = `<div style="text-align:center;padding:4rem;color:var(--text3)">
@@ -8196,11 +8321,15 @@ function empRenderChecklist() {
   const cnpj14cl = (emp.cnpj || '').replace(/\D/g, '');
   const allLiaPedidos = ls('jdc_lia_pedidos', {});
 
+  // Verificar se há algum período baixado para habilitar CSV
+  let _temBaixado = false;
+  decls.forEach(d => { const periods = empGetPeriods(d); periods.forEach(p => { if (cl[d.id]&&cl[d.id][p]&&cl[d.id][p].baixado) _temBaixado = true; }); });
+
   const toolbar = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);flex-wrap:wrap">
     ${getSession().admin ? `<button onclick="empAbrirLiaSelect(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
     <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>` : ''}
     <div style="flex:1"></div>
-    <button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>
+    ${_temBaixado ? `<button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>` : `<span style="font-size:.72rem;color:var(--text3)" title="CSV disponível após o primeiro download">📊 CSV (aguardando download)</span>`}
   </div>`;
 
   el.innerHTML = toolbar + decls.map(d => {
@@ -8249,42 +8378,56 @@ function empRenderChecklist() {
     const isAnual = d.id === 'ecd' || d.id === 'ecf';
     const temPrazo = d.id === 'ecd' || d.id === 'ecf' || d.id === 'efd_contrib' || d.id === 'efd_icms';
     const liaPedidos = isLia ? allLiaPedidos : {};
+    const faseColor = conf===periods.length&&periods.length ? '#16a34a' : done>0 ? '#2563eb' : 'var(--text3)';
+    const faseTxt = conf===periods.length&&periods.length ? '✅ Todos liberados' : conf>0 ? `✅ ${conf} lib · 🔍 ${done-conf} conf · 📥 ${periods.length-done} dl` : done>0 ? `🔍 ${done} baixados · 📥 ${periods.length-done} pendentes` : `📥 ${periods.length} pendentes`;
 
-    return `<div style="margin-bottom:1.5rem">
-      <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.6rem;flex-wrap:wrap">
-        <div style="font-weight:700;font-size:.875rem">${d.icon||'📄'} ${esc(d.label)}</div>
-        <span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:${isLia?'var(--primary-l,#eef2ff)':'#f1f5f9'};color:${isLia?'var(--primary)':'#64748b'}">${isLia?'🤖 LIA':'👤 Manual'}</span>
-        ${isAnual ? '<span style="font-size:.68rem;padding:.15rem .5rem;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:700">📅 Anual</span>' : ''}
-        <span style="font-size:.72rem;color:var(--text3)">${d.inicio} → ${d.fim}</span>
-        <span style="font-size:.7rem;font-weight:700;padding:.15rem .5rem;border-radius:99px;background:${done===periods.length&&periods.length?'#dcfce7':'var(--bg)'};color:${done===periods.length&&periods.length?'#16a34a':'var(--text3)'}">
-          ${periods.length} solicitado(s) · ${done} baixado(s) · ${conf} conferido(s)
-        </span>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(${isAnual?'270px':'220px'},1fr));gap:.4rem">
+    return `<details style="margin-bottom:1rem;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <summary style="display:flex;align-items:center;gap:.6rem;padding:.65rem .9rem;background:var(--bg);cursor:pointer;list-style:none;flex-wrap:wrap">
+        <span style="font-weight:700;font-size:.875rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.icon||'📄'} ${esc(d.label)}</span>
+        <span style="font-size:.65rem;padding:.12rem .45rem;border-radius:99px;background:${isLia?'var(--primary-l,#eef2ff)':'#f1f5f9'};color:${isLia?'var(--primary)':'#64748b'};flex-shrink:0">${isLia?'🤖 LIA':'👤 Manual'}</span>
+        ${isAnual ? '<span style="font-size:.65rem;padding:.12rem .45rem;border-radius:99px;background:#fef3c7;color:#92400e;flex-shrink:0">📅 Anual</span>' : ''}
+        <span style="font-size:.68rem;color:${faseColor};font-weight:600;flex-shrink:0">${faseTxt}</span>
+        <span style="font-size:.7rem;color:var(--text3);flex-shrink:0">${d.inicio} → ${d.fim}</span>
+      </summary>
+      <div style="padding:.6rem .75rem;display:flex;flex-direction:column;gap:.3rem;background:var(--surface)">
         ${periods.map(p => {
           const s = dCl[p] || {};
           const prazoOk = !temPrazo || empDeadlinePassou(d.id, p);
-          const rowBg = prazoOk ? 'var(--bg)' : '#f9fafb';
-          const rowBorder = prazoOk ? '1px solid var(--border)' : '1px dashed #cbd5e1';
-          const rowOp = prazoOk ? '' : 'opacity:.65;';
-          return `<div style="background:${rowBg};border:${rowBorder};border-radius:8px;padding:.5rem .75rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;${rowOp}">
-            <span style="font-size:.75rem;font-weight:600;color:var(--text2);min-width:48px">📅 ${p}</span>
-            ${temPrazo && !prazoOk ? '<span style="font-size:.62rem;background:#fef3c7;color:#92400e;padding:.1rem .35rem;border-radius:4px;white-space:nowrap">prazo pendente</span>' : ''}
-            <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)">
-              <input type="checkbox" ${s.baixado?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','baixado',this.checked)" style="accent-color:var(--primary)"> Baixado
-            </label>
-            <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)">
-              <input type="checkbox" ${s.conferido?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','conferido',this.checked)" style="accent-color:#10b981"> Conferido
-            </label>
-            <label style="display:flex;align-items:center;gap:.25rem;cursor:pointer;font-size:.72rem;color:var(--text3)" title="Marque se este arquivo é uma retificação de entrega anterior">
-              <input type="checkbox" ${s.retificador?'checked':''} onchange="empToggleCl(${_empClIdx},'${d.id}','${p}','retificador',this.checked)" style="accent-color:#f59e0b"> Ret.
-            </label>
-            ${isLia ? _liaRowHtml(_empClIdx, d.id, p, liaPedidos, emp.cnpj) : ''}
-          </div>`;
+          const lp = liaPedidos[cnpj14cl + '_' + d.id + '_' + p] || null;
+          const liaStatus = lp ? (lp.status || 'AGUARDANDO') : null;
+
+          // Determinar fase/pill
+          let pill = '';
+          if (!prazoOk) {
+            pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:600">⏰ Prazo pendente</span>';
+          } else if (liaStatus && liaStatus !== 'CONCLUIDO' && liaStatus !== 'ERRO') {
+            const liaCores = {AGUARDANDO:'#6366f1',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b'};
+            const liaIcs   = {AGUARDANDO:'⏳',PROCESSANDO:'⚙️',BAIXANDO:'📥'};
+            pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:#eef2ff;color:' + (liaCores[liaStatus]||'#6366f1') + ';font-weight:600">' + (liaIcs[liaStatus]||'⏳') + ' ' + liaStatus + '</span>';
+          } else if (liaStatus === 'ERRO') {
+            const _prazoVenceu = !temPrazo || empDeadlinePassou(d.id, p);
+            const errLabel = !_prazoVenceu ? '⏰ Em prazo' : '📭 Não entregue';
+            const errCor = !_prazoVenceu ? '#d97706' : '#ea580c';
+            pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:#fef3c7;color:' + errCor + ';font-weight:600">' + errLabel + '</span>';
+          } else if (s.conferido) {
+            pill = '<button onclick="empToggleCl(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\',\'conferido\',false)" style="font-size:.68rem;padding:.18rem .55rem;border-radius:99px;background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;font-weight:700;cursor:pointer">✅ Liberado</button>';
+          } else if (s.baixado) {
+            pill = '<button onclick="empToggleCl(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\',\'conferido\',true)" style="font-size:.68rem;padding:.18rem .55rem;border-radius:99px;background:#fefce8;color:#854d0e;border:1.5px solid #fde047;font-weight:700;cursor:pointer">🔍 Conferir</button>';
+          } else if (!isLia) {
+            pill = '<button onclick="empToggleCl(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\',\'baixado\',true)" style="font-size:.68rem;padding:.18rem .55rem;border-radius:99px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;font-weight:700;cursor:pointer">📥 Marcar baixado</button>';
+          } else {
+            pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:var(--bg);color:var(--text3);border:1px solid var(--border)">📥 Pendente</span>';
+          }
+
+          return '<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;border-radius:6px;background:var(--bg)">' +
+            '<span style="font-size:.75rem;font-weight:600;color:var(--text2);min-width:52px">📅 ' + p + '</span>' +
+            '<div style="flex:1">' + pill + '</div>' +
+            (lp && liaStatus === 'CONCLUIDO' && lp.pedido_id ? '<button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\',' + _empClIdx + ')" title="Salvar arquivo" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.15rem .45rem;font-size:.65rem;cursor:pointer;flex-shrink:0">⬇️</button>' : '') +
+            '</div>';
         }).join('')}
       </div>
-    </div>`;
-  }).join('<hr style="border:none;border-top:1px solid var(--border);margin:0 0 1.25rem 0">');
+    </details>`;
+  }).join('');
 }
 
 function empToggleCl(empIdx, declId, periodo, field, value) {
@@ -8558,7 +8701,7 @@ function renderEmpresasDashStats() {
     await liaSolicitar(empIdx, 'esocial', periodo, compIni, compFim);
   }
 
-  async function liaSolicitar(empIdx, declId, periodo, compIniOverride, compFimOverride) {
+  async function liaSolicitar(empIdx, declId, periodo, pastaLocalOverride, compIniOverride, compFimOverride) {
     var emps = getEmpresas();
     var emp = emps[empIdx];
     if (!emp) return;
@@ -8583,6 +8726,7 @@ function renderEmpresasDashStats() {
     if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
     try {
       var token = await liaGetToken();
+      var pastaLocal = pastaLocalOverride || emp.pasta_local || '';
       var body = {
         nome_cliente: emp.razao_social || emp.cnpj,
         cnpj: cnpj14,
@@ -8590,6 +8734,7 @@ function renderEmpresasDashStats() {
         competencia_ini: compIni,
         competencia_fim: compFim
       };
+      if (pastaLocal) body.pasta_local = pastaLocal;
       var r = await fetch(cfg.url + '/api/v1/pedidos', {
         method: 'POST',
         headers: {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
@@ -8982,6 +9127,9 @@ function renderEmpresasDashStats() {
     var total = Object.values(allPeriods).reduce(function(s, a) { return s + a.length; }, 0);
     if (!total) { alert('Nenhum período disponível para a seleção feita.'); return; }
 
+    var semPastaLocal = (document.getElementById('lia-sem-pasta-local') || {}).checked;
+    var pastaLocal = semPastaLocal ? '' : ((document.getElementById('lia-pasta-local') || {}).value || '').trim();
+
     document.getElementById('lia-select-modal').style.display = 'none';
     navTo('empresas', document.querySelector('[data-page="empresas"]'));
 
@@ -8997,7 +9145,7 @@ function renderEmpresasDashStats() {
         var existing = ls('jdc_lia_pedidos', {});
         if (!existing[key] || existing[key].status === 'ERRO') {
           try {
-            await liaSolicitar(_liaSelectEmpIdx, declId, p);
+            await liaSolicitar(_liaSelectEmpIdx, declId, p, pastaLocal);
             cnt++;
           } catch(e) {
             var msg = e.message || String(e);
@@ -9142,6 +9290,17 @@ function renderEmpresasDashStats() {
 
   // ── REFRESH ALL + POLLING ─────────────────────────────────────────────
   async function _liaRefreshAll() {
+    // 1) Pede ao backend para sincronizar status com ReceitaNetBX
+    try {
+      var token = await liaGetToken();
+      var cfg = liaGetConfig();
+      await fetch(cfg.url + '/api/v1/pedidos/sincronizar', {
+        method: 'POST',
+        headers: {'Authorization': 'Bearer ' + token}
+      });
+    } catch(e) { console.warn('_liaRefreshAll sincronizar:', e); }
+
+    // 2) Agora lê o status atualizado do banco para cada pedido pendente
     var pedidos = ls('jdc_lia_pedidos', {});
     var entries = Object.entries(pedidos);
     var emps = getEmpresas();
@@ -9158,8 +9317,9 @@ function renderEmpresasDashStats() {
         try { await liaRefresh(empIdx, declId, per); } catch(e) { console.warn('_liaRefreshAll:', e); }
       }
     }
-    liaDownloadBarUpdate();
-    renderInteligencia();
+    renderEmpresas();
+    if (document.getElementById('pg-inteligencia') && document.getElementById('pg-inteligencia').classList.contains('active')) renderInteligencia();
+    if (document.getElementById('admin-sec-lia') && document.getElementById('admin-sec-lia').classList.contains('active')) renderAdminLia();
   }
 
   // Auto-poll a cada 8 segundos enquanto há pedidos ativos
