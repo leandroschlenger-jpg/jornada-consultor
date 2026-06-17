@@ -1528,7 +1528,8 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.8.0';
+try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
+  const APP_VERSION = '1.8.1';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5492,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.1', data: '2026-06-17', desc: 'API passa a usar URL fixa https://api.scoutassociados.com (HTTPS proprio na VM via Caddy, sem Cloudflare). Migra automaticamente quem ainda tinha URL de tunnel temporario.' },
   { ver: '1.8.0', data: '2026-06-17', desc: 'Baixar LIA agora cria um processo no servidor (fluxo compartilhado) e o painel de selecao mostra os downloads anteriores da empresa (data, usuario, periodo, etapa).' },
   { ver: '1.7.0', data: '2026-06-17', desc: 'Backend: fundacao de processos (fluxo Download-Conferencia-Liberados compartilhado no servidor, tabela processos + API). Base para o novo card. Sem mudanca visual ainda.' },
   { ver: '1.6.1', data: '2026-06-17', desc: 'Checklist: status e contador agora refletem os downloads concluidos da LIA (antes apareciam como Pendente mesmo ja baixados).' },
