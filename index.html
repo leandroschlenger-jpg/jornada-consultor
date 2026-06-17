@@ -8466,7 +8466,7 @@ function empRenderChecklist() {
             pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:#fef3c7;color:' + errCor + ';font-weight:600">' + errLabel + '</span>';
           } else if (s.conferido) {
             pill = '<button onclick="empToggleCl(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\',\'conferido\',false)" style="font-size:.68rem;padding:.18rem .55rem;border-radius:99px;background:#dcfce7;color:#16a34a;border:1.5px solid #86efac;font-weight:700;cursor:pointer">✅ Liberado</button>';
-          } else if (s.baixado) {
+          } else if (s.baixado || liaStatus === 'CONCLUIDO') {
             pill = '<button onclick="empToggleCl(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\',\'conferido\',true)" style="font-size:.68rem;padding:.18rem .55rem;border-radius:99px;background:#fefce8;color:#854d0e;border:1.5px solid #fde047;font-weight:700;cursor:pointer">🔍 Conferir</button>';
           } else if (!isLia) {
             pill = '<button onclick="empToggleCl(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\',\'baixado\',true)" style="font-size:.68rem;padding:.18rem .55rem;border-radius:99px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd;font-weight:700;cursor:pointer">📥 Marcar baixado</button>';
