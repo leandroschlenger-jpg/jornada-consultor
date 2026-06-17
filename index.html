@@ -1528,7 +1528,7 @@ const ACHIEVEMENTS=[
 // ─────────────────────────────────────────────
 // VERSÃO
 // ─────────────────────────────────────────────
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5492,6 +5492,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.0', data: '2026-06-17', desc: 'Baixar LIA agora cria um processo no servidor (fluxo compartilhado) e o painel de selecao mostra os downloads anteriores da empresa (data, usuario, periodo, etapa).' },
   { ver: '1.7.0', data: '2026-06-17', desc: 'Backend: fundacao de processos (fluxo Download-Conferencia-Liberados compartilhado no servidor, tabela processos + API). Base para o novo card. Sem mudanca visual ainda.' },
   { ver: '1.6.1', data: '2026-06-17', desc: 'Checklist: status e contador agora refletem os downloads concluidos da LIA (antes apareciam como Pendente mesmo ja baixados).' },
   { ver: '1.6.0', data: '2026-06-17', desc: 'Cards de fase contam por empresa (não período); sub-label mostra qtd de períodos. Botão ⚙️ removido do card — clique no nome da empresa para editar. Remover empresa exige senha e avisa sobre arquivos baixados. 🤖 aparece só após solicitar download. Pasta LIA: atalhos rápidos de caminho. Changelog: leitura apenas, mantido pelo dev. _liaRefreshAll com feedback visual.' },
@@ -9064,6 +9065,7 @@ function renderEmpresasDashStats() {
 
     var nameEl = document.getElementById('lia-select-empresa-name');
     if (nameEl) nameEl.textContent = emp.razao_social || emp.cnpj;
+    liaRenderDownloadsAnteriores(emp);
 
     var declsEl = document.getElementById('lia-select-decls');
     if (declsEl) {
@@ -9191,6 +9193,55 @@ function renderEmpresasDashStats() {
     return result;
   }
 
+  async function liaCriarProcessoLote(emp, allPeriods){
+    try{
+      var cfg = JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');
+      var base = cfg.url; if(!base) return;
+      var cnpj14 = (emp && emp.cnpj ? emp.cnpj : '').replace(/\D/g,'');
+      var peds = JSON.parse(localStorage.getItem('jdc_lia_pedidos')||'{}');
+      var ids = [], periodos = [];
+      Object.keys(allPeriods||{}).forEach(function(declId){
+        (allPeriods[declId]||[]).forEach(function(p){
+          var k = cnpj14 + '_' + declId + '_' + p;
+          if(peds[k] && peds[k].pedido_id){ ids.push(peds[k].pedido_id); periodos.push({tipo:declId, competencia:p}); }
+        });
+      });
+      if(!ids.length) return;
+      var tk = await fetch(base+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+      var tok = (await tk.json()).access_token;
+      await fetch(base+'/api/v1/processos',{method:'POST',headers:{'Authorization':'Bearer '+tok,'Content-Type':'application/json'},body:JSON.stringify({cnpj:cnpj14, origem:'lia', periodos:periodos, pedido_ids:ids})});
+    }catch(e){ console.warn('liaCriarProcessoLote', e); }
+  }
+
+  async function liaRenderDownloadsAnteriores(emp){
+    try{
+      var nameEl = document.getElementById('lia-select-empresa-name');
+      if(!nameEl) return;
+      var host = document.getElementById('lia-prev-downloads');
+      if(!host){ host = document.createElement('div'); host.id='lia-prev-downloads'; host.style.cssText='margin:.5rem 0;font-size:.74rem'; nameEl.parentNode.insertBefore(host, nameEl.nextSibling); }
+      var cfg = JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');
+      var base = cfg.url; if(!base){ host.innerHTML=''; return; }
+      var cnpj14 = (emp && emp.cnpj ? emp.cnpj : '').replace(/\D/g,'');
+      host.innerHTML = '<span style="color:#888">Carregando downloads anteriores...</span>';
+      var tk = await fetch(base+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+      var tok = (await tk.json()).access_token;
+      var rsp = await fetch(base+'/api/v1/processos?cnpj='+cnpj14,{headers:{'Authorization':'Bearer '+tok}});
+      var data = await rsp.json();
+      var items = (data && data.items) || [];
+      if(!items.length){ host.innerHTML=''; return; }
+      var rows = items.slice(0,6).map(function(pr){
+        var dt = pr.criado_em ? new Date(pr.criado_em).toLocaleString('pt-BR') : '-';
+        var pers = (pr.periodos||[]).map(function(x){ return (x.tipo||'')+' '+(x.competencia||''); }).join(', ');
+        if(!pers){ pers = ((pr.pedido_ids||[]).length)+' item(s)'; }
+        var et = pr.etapa||'';
+        return '<div style="padding:.25rem .4rem;border-left:3px solid #c7d2fe;background:#f8fafc;margin:.15rem 0;border-radius:4px">'
+          + '<b>'+dt+'</b> - '+(pr.usuario_nome||'-')+' - <span style="color:#6366f1">'+et+'</span>'
+          + '<br><span style="color:#555">'+pers+'</span></div>';
+      }).join('');
+      host.innerHTML = '<div style="font-weight:600;color:#92400e;margin-bottom:.2rem">Downloads anteriores desta empresa ('+items.length+')</div>'+rows;
+    }catch(e){ console.warn('liaRenderDownloadsAnteriores', e); }
+  }
+
   async function empConfirmarLiaSelect() {
     if (_liaSelectEmpIdx < 0) return;
     var emp = getEmpresas()[_liaSelectEmpIdx];
@@ -9243,6 +9294,7 @@ function renderEmpresasDashStats() {
     } else {
       showToast(cnt + ' pedido(s) enviados' + (errs ? ' · ' + errs + ' erro(s)' : '') + '!', cnt ? '#10b981' : '#ef4444');
     }
+    try { await liaCriarProcessoLote(emp, allPeriods); } catch(e){ console.warn(e); }
     renderEmpresas();
   }
 
