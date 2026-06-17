@@ -8428,7 +8428,7 @@ function empRenderChecklist() {
     </div>`;
 
     const dCl = cl[d.id] || {};
-    const done = periods.filter(p => dCl[p] && dCl[p].baixado).length;
+    const done = periods.filter(p => (dCl[p] && dCl[p].baixado) || (isLia && (allLiaPedidos[cnpj14cl+'_'+d.id+'_'+p]||{}).status === 'CONCLUIDO')).length;
     const conf = periods.filter(p => dCl[p] && dCl[p].conferido).length;
     const isAnual = d.id === 'ecd' || d.id === 'ecf';
     const temPrazo = d.id === 'ecd' || d.id === 'ecf' || d.id === 'efd_contrib' || d.id === 'efd_icms';
