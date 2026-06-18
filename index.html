@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.1';
+  const APP_VERSION = '1.8.2';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.2', data: '2026-06-18', desc: 'Card mais limpo: a lista de declaracoes (chips) sai da capa do card. A barra de status de download e os botoes permanecem.' },
   { ver: '1.8.1', data: '2026-06-17', desc: 'API passa a usar URL fixa https://api.scoutassociados.com (HTTPS proprio na VM via Caddy, sem Cloudflare). Migra automaticamente quem ainda tinha URL de tunnel temporario.' },
   { ver: '1.8.0', data: '2026-06-17', desc: 'Baixar LIA agora cria um processo no servidor (fluxo compartilhado) e o painel de selecao mostra os downloads anteriores da empresa (data, usuario, periodo, etapa).' },
   { ver: '1.7.0', data: '2026-06-17', desc: 'Backend: fundacao de processos (fluxo Download-Conferencia-Liberados compartilhado no servidor, tabela processos + API). Base para o novo card. Sem mudanca visual ainda.' },
@@ -8230,19 +8231,6 @@ function empCard(e, i) {
       ${e.municipio ? `<span style="font-size:.7rem;color:var(--text3)">📍 ${esc(e.municipio)}${e.uf?'/'+e.uf:''}</span>` : ''}
       ${e.atividade_principal && e.atividade_principal[0] ? `<span style="font-size:.7rem;color:var(--text3)">${esc(e.atividade_principal[0].text.substring(0,45))}…</span>` : ''}
     </div>
-
-    <!-- Declaration types -->
-    ${decls.length ? `<div style="display:flex;gap:.35rem;flex-wrap:wrap">
-      ${decls.map(d => {
-        const ps = empGetPeriods(d);
-        const done = ps.filter(p => cl[d.id] && cl[d.id][p] && cl[d.id][p].baixado).length;
-        const ok = (d.semPeriodo && d.ativo) || (ps.length && done === ps.length);
-        const isLia = (d.controle || 'lia') === 'lia';
-        const hasLiaPed = isLia && _todosP.some(([k]) => k.startsWith(_cnpj14c + '_' + d.id + '_'));
-        const ctrlBadge = hasLiaPed ? ' 🤖' : (isLia ? '' : ' 👤');
-        return `<span style="font-size:.7rem;font-weight:600;padding:.2rem .55rem;border-radius:99px;background:${ok?'#dcfce7':'var(--bg)'};color:${ok?'#16a34a':'var(--text3)'};border:1px solid ${ok?'#86efac':'var(--border)'}" title="${d.label}${isLia?' — L\'IA':' — Manual'}: ${d.semPeriodo?'sem período':done+'/'+ps.length+' baixados'}">${d.icon||'📄'} ${esc(d.label)}${ctrlBadge}</span>`;
-      }).join('')}
-    </div>` : `<div style="font-size:.78rem;color:var(--text3)">Nenhuma declaração configurada</div>`}
 
     <!-- Barra de progresso LIA (baseada em pedidos solicitados) -->
     ${_liaTem ? (() => {
