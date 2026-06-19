@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.3';
+  const APP_VERSION = '1.8.4';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.4', data: '2026-06-19', desc: 'Auto-atualizacao do card nao re-renderiza mais enquanto ha um modal/tela aberta (corrige telas fechando sozinhas durante downloads).' },
   { ver: '1.8.3', data: '2026-06-19', desc: 'Card agora conta do backend (por periodo unico) em vez do localStorage: numero de downloads bate com o real e compartilhado. Atualiza sozinho a cada 25s.' },
   { ver: '1.8.2', data: '2026-06-18', desc: 'Card mais limpo: a lista de declaracoes (chips) sai da capa do card. A barra de status de download e os botoes permanecem.' },
   { ver: '1.8.1', data: '2026-06-17', desc: 'API passa a usar URL fixa https://api.scoutassociados.com (HTTPS proprio na VM via Caddy, sem Cloudflare). Migra automaticamente quem ainda tinha URL de tunnel temporario.' },
@@ -9482,6 +9483,18 @@ function renderEmpresasDashStats() {
 (function(){
   window._liaStats = window._liaStats || {};
   window._liaStatsTs = 0;
+  window._liaModalAberto = function(){
+    try{
+      var all=document.querySelectorAll('div');
+      for(var i=0;i<all.length;i++){ var e=all[i], cs=getComputedStyle(e);
+        if((cs.position==='fixed'||cs.position==='absolute') && cs.display!=='none' && e.offsetParent!==null){
+          var r=e.getBoundingClientRect();
+          if(r.width>300 && r.height>200 && (parseInt(cs.zIndex)||0)>=10) return true;
+        }
+      }
+    }catch(e){}
+    return false;
+  };
   window.liaLoadStats = async function(force){
     try{
       if(!force && Date.now()-(window._liaStatsTs||0) < 20000) return;
@@ -9493,7 +9506,7 @@ function renderEmpresasDashStats() {
       if(s && typeof s==='object'){
         var changed = JSON.stringify(s)!==JSON.stringify(window._liaStats||{});
         window._liaStats=s;
-        if(changed && typeof window.renderEmpresas==='function') window.renderEmpresas();
+        if(changed && !window._liaModalAberto() && typeof window.renderEmpresas==='function') window.renderEmpresas();
       }
     }catch(e){console.warn('liaLoadStats',e);}
   };
