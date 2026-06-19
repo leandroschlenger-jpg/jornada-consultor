@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.2';
+  const APP_VERSION = '1.8.3';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.3', data: '2026-06-19', desc: 'Card agora conta do backend (por periodo unico) em vez do localStorage: numero de downloads bate com o real e compartilhado. Atualiza sozinho a cada 25s.' },
   { ver: '1.8.2', data: '2026-06-18', desc: 'Card mais limpo: a lista de declaracoes (chips) sai da capa do card. A barra de status de download e os botoes permanecem.' },
   { ver: '1.8.1', data: '2026-06-17', desc: 'API passa a usar URL fixa https://api.scoutassociados.com (HTTPS proprio na VM via Caddy, sem Cloudflare). Migra automaticamente quem ainda tinha URL de tunnel temporario.' },
   { ver: '1.8.0', data: '2026-06-17', desc: 'Baixar LIA agora cria um processo no servidor (fluxo compartilhado) e o painel de selecao mostra os downloads anteriores da empresa (data, usuario, periodo, etapa).' },
@@ -8207,10 +8208,12 @@ function empCard(e, i) {
   // Pedidos LIA desta empresa
   const _cnpj14c = (e.cnpj || '').replace(/\D/g, '');
   const _todosP = Object.entries(ls('jdc_lia_pedidos', {})).filter(([k]) => k.startsWith(_cnpj14c + '_'));
-  const _liaAtivos = _todosP.filter(([,v]) => v.status !== 'CONCLUIDO' && v.status !== 'ERRO').length;
-  const _liaErros  = _todosP.filter(([,v]) => v.status === 'ERRO').length;
-  const _liaConc   = _todosP.filter(([,v]) => v.status === 'CONCLUIDO').length;
-  const _liaTem    = _todosP.length > 0;
+  const _bk = (window._liaStats||{})[_cnpj14c];
+  const _todosTot = _bk ? _bk.total : _todosP.length;
+  const _liaAtivos = _bk ? (_bk.andamento||0) : _todosP.filter(([,v]) => v.status !== 'CONCLUIDO' && v.status !== 'ERRO').length;
+  const _liaErros = _bk ? (_bk.erros||0) : _todosP.filter(([,v]) => v.status === 'ERRO').length;
+  const _liaConc = _bk ? (_bk.concluidos||0) : _todosP.filter(([,v]) => v.status === 'CONCLUIDO').length;
+  const _liaTem = _bk ? (_bk.total>0) : (_todosP.length > 0);
 
   return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;box-shadow:var(--sh);display:flex;flex-direction:column;gap:.75rem">
     <!-- Header -->
@@ -8234,7 +8237,7 @@ function empCard(e, i) {
 
     <!-- Barra de progresso LIA (baseada em pedidos solicitados) -->
     ${_liaTem ? (() => {
-      const _total = _todosP.length;
+      const _total = _todosTot;
       const _concP = _liaConc;
       const _pct2  = _total ? Math.round(_concP / _total * 100) : 0;
       const _barColor = _concP === _total ? '#10b981' : _liaAtivos > 0 ? '#6366f1' : '#f59e0b';
@@ -9474,5 +9477,29 @@ function renderEmpresasDashStats() {
 
 <!-- ─── BARRA DE DOWNLOADS LIA ─── -->
 
+
+<script>
+(function(){
+  window._liaStats = window._liaStats || {};
+  window._liaStatsTs = 0;
+  window.liaLoadStats = async function(force){
+    try{
+      if(!force && Date.now()-(window._liaStatsTs||0) < 20000) return;
+      window._liaStatsTs = Date.now();
+      var cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}'); if(!cfg.url) return;
+      var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+      var tok=(await tk.json()).access_token;
+      var s=await(await fetch(cfg.url+'/api/v1/pedidos/stats',{headers:{'Authorization':'Bearer '+tok}})).json();
+      if(s && typeof s==='object'){
+        var changed = JSON.stringify(s)!==JSON.stringify(window._liaStats||{});
+        window._liaStats=s;
+        if(changed && typeof window.renderEmpresas==='function') window.renderEmpresas();
+      }
+    }catch(e){console.warn('liaLoadStats',e);}
+  };
+  setTimeout(function(){ window.liaLoadStats(true); }, 2000);
+  setInterval(function(){ window.liaLoadStats(false); }, 25000);
+})();
+</script>
 </body>
 </html>
