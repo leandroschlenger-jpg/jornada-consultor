@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.5';
+  const APP_VERSION = '1.8.6';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.6', data: '2026-06-19', desc: 'Sincronizacao so avisa quando algo muda (removido o aviso Nenhum status alterado que aparecia toda hora).' },
   { ver: '1.8.5', data: '2026-06-19', desc: 'Painel de downloads anteriores ficou compacto (resumo por solicitacao) para nao atrapalhar a nova solicitacao.' },
   { ver: '1.8.4', data: '2026-06-19', desc: 'Auto-atualizacao do card nao re-renderiza mais enquanto ha um modal/tela aberta (corrige telas fechando sozinhas durante downloads).' },
   { ver: '1.8.3', data: '2026-06-19', desc: 'Card agora conta do backend (por periodo unico) em vez do localStorage: numero de downloads bate com o real e compartilhado. Atualiza sozinho a cada 25s.' },
@@ -9460,7 +9461,7 @@ function renderEmpresasDashStats() {
     if (btn) { btn.disabled = false; btn.textContent = origText; }
     if (sincResult) {
       var n = sincResult.sincronizados || 0;
-      showToast(n ? '✅ ' + n + ' pedido(s) atualizado(s)' : '🔄 Nenhum status alterado', n ? '#10b981' : '#6366f1');
+      if (n) showToast('Atualizado: ' + n + ' pedido(s)', '#10b981');
     }
   }
 
