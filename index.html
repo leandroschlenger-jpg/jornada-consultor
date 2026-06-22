@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.4';
+  const APP_VERSION = '1.8.5';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.5', data: '2026-06-19', desc: 'Painel de downloads anteriores ficou compacto (resumo por solicitacao) para nao atrapalhar a nova solicitacao.' },
   { ver: '1.8.4', data: '2026-06-19', desc: 'Auto-atualizacao do card nao re-renderiza mais enquanto ha um modal/tela aberta (corrige telas fechando sozinhas durante downloads).' },
   { ver: '1.8.3', data: '2026-06-19', desc: 'Card agora conta do backend (por periodo unico) em vez do localStorage: numero de downloads bate com o real e compartilhado. Atualiza sozinho a cada 25s.' },
   { ver: '1.8.2', data: '2026-06-18', desc: 'Card mais limpo: a lista de declaracoes (chips) sai da capa do card. A barra de status de download e os botoes permanecem.' },
@@ -9230,7 +9231,7 @@ function renderEmpresasDashStats() {
         var et = pr.etapa||'';
         return '<div style="padding:.25rem .4rem;border-left:3px solid #c7d2fe;background:#f8fafc;margin:.15rem 0;border-radius:4px">'
           + '<b>'+dt+'</b> - '+(pr.usuario_nome||'-')+' - <span style="color:#6366f1">'+et+'</span>'
-          + '<br><span style="color:#555">'+pers+'</span></div>';
+          + ' - '+((pr.periodos||[]).length||(pr.pedido_ids||[]).length)+' periodos</div>';
       }).join('');
       host.innerHTML = '<div style="font-weight:600;color:#92400e;margin-bottom:.2rem">Downloads anteriores desta empresa ('+items.length+')</div>'+rows;
     }catch(e){ console.warn('liaRenderDownloadsAnteriores', e); }
