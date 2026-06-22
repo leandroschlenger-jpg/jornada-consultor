@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.3';
+  const APP_VERSION = '1.9.4';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.4', data: '2026-06-22', desc: 'Baixado manualmente: cada periodo pendente do checklist tem botao Manual para anexar um arquivo (e-CAC/SEFAZ); ele sobe pro VM e banco e o periodo fica marcado como baixado e baixavel pela seta.' },
   { ver: '1.9.3', data: '2026-06-22', desc: 'CSV exportado ganhou as colunas Data Transmissão e Situação Entrega (no prazo/atrasado) para ECF e Contribuições.' },
   { ver: '1.9.2', data: '2026-06-22', desc: 'Botao Checklist do processo abre o checklist filtrado so com os periodos daquele processo (com banner Processo #X, Liberar e Ver empresa toda).' },
   { ver: '1.9.1', data: '2026-06-22', desc: 'Botao Liberar no painel de cada processo: marca como conferido e move para Liberados de uma vez (conferido geral), salvo no backend e compartilhado.' },
@@ -8524,6 +8525,7 @@ function empRenderChecklist() {
             '<span style="font-size:.75rem;font-weight:600;color:var(--text2);min-width:52px">📅 ' + p + '</span>' +
             '<div style="flex:1">' + pill + '</div>' +
             empTransmInfo(cnpj14cl, d.id, p) +
+            (LIA_TIPO_MAP[d.id] && !(s.baixado || liaStatus==='CONCLUIDO') ? '<button onclick="empUploadManual(' + _empClIdx + ',\'' + d.id + '\',\'' + p + '\')" title="Registrar arquivo baixado manualmente" style="background:#fff;color:#6366f1;border:1px solid #c7d2fe;border-radius:4px;padding:.15rem .4rem;font-size:.62rem;cursor:pointer;flex-shrink:0">📎 Manual</button>' : '') +
             (lp && liaStatus === 'CONCLUIDO' && lp.pedido_id ? '<button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\',' + _empClIdx + ')" title="Salvar arquivo" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.15rem .45rem;font-size:.65rem;cursor:pointer;flex-shrink:0">⬇️</button>' : '') +
             '</div>';
         }).join('')}
@@ -8532,6 +8534,36 @@ function empRenderChecklist() {
   }).join('');
 }
 
+window.empUploadManual = function(empIdx, declId, periodo){
+  var tipo = (typeof LIA_TIPO_MAP!=='undefined') ? LIA_TIPO_MAP[declId] : null;
+  if(!tipo){ if(typeof showToast==='function') showToast('Este tipo nao aceita upload','#dc2626'); return; }
+  var emp = getEmpresas()[empIdx]; if(!emp) return;
+  var cnpj14 = (emp.cnpj||'').replace(/\D/g,'');
+  var ci, cf;
+  if(declId==='ecd'||declId==='ecf'){ ci=periodo+'-01'; cf=periodo+'-12'; }
+  else { var pr=(periodo+'').split('/'); if(!pr[1]) return; ci=pr[1]+'-'+('0'+pr[0]).slice(-2); cf=ci; }
+  var inp=document.createElement('input'); inp.type='file';
+  inp.onchange=async function(){
+    var file=inp.files&&inp.files[0]; if(!file) return;
+    try{
+      var cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}'); if(!cfg.url) return;
+      var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+      var tok=(await tk.json()).access_token;
+      var fd=new FormData(); fd.append('cnpj',cnpj14); fd.append('tipo',tipo); fd.append('competencia_ini',ci); fd.append('competencia_fim',cf); fd.append('arquivo',file);
+      if(typeof showToast==='function') showToast('Enviando arquivo...','#6366f1');
+      var r=await fetch(cfg.url+'/api/v1/pedidos/manual',{method:'POST',headers:{'Authorization':'Bearer '+tok},body:fd});
+      if(r.ok){
+        var j=await r.json();
+        var lp=ls('jdc_lia_pedidos',{}); lp[cnpj14+'_'+declId+'_'+periodo]={status:'CONCLUIDO',pedido_id:j.pedido_id,manual:true}; lsSave('jdc_lia_pedidos',lp);
+        empToggleCl(empIdx,declId,periodo,'baixado',true);
+        if(typeof showToast==='function') showToast('Arquivo registrado!','#16a34a');
+        if(window.liaLoadStats) window.liaLoadStats(true);
+        empRenderChecklist();
+      } else { if(typeof showToast==='function') showToast('Falha no upload ('+r.status+')','#dc2626'); }
+    }catch(e){ if(typeof showToast==='function') showToast('Erro: '+e,'#dc2626'); }
+  };
+  inp.click();
+};
 function empToggleCl(empIdx, declId, periodo, field, value) {
   const emps = getEmpresas();
   if (!emps[empIdx]) return;
