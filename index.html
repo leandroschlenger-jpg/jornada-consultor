@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.0';
+  const APP_VERSION = '1.9.1';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.1', data: '2026-06-22', desc: 'Botao Liberar no painel de cada processo: marca como conferido e move para Liberados de uma vez (conferido geral), salvo no backend e compartilhado.' },
   { ver: '1.9.0', data: '2026-06-22', desc: 'Checklist mostra a data de transmissao (ECF e Contribuicoes) e compara com o vencimento legal em dias uteis: marca no prazo ou Xd de atraso. ECD e EFD ICMS/IPI ficam so com o vencimento.' },
   { ver: '1.8.7', data: '2026-06-19', desc: 'Card mostra os processos (solicitacoes) empilhados: cada um com data, etapa (Download/Conferencia/Liberados) e contagem, lendo do backend. Botao Checklist por processo.' },
   { ver: '1.8.6', data: '2026-06-19', desc: 'Sincronizacao so avisa quando algo muda (removido o aviso Nenhum status alterado que aparecia toda hora).' },
@@ -8299,6 +8300,7 @@ function empCard(e, i) {
           +'<span style="color:var(--text2)">'+_dt+'</span>'
           +'<span style="margin-left:auto;color:#16a34a;font-weight:600">'+(_pd.concluidos||0)+'/'+(_pd.total||0)+'</span>'
           +(_pd.erros?'<span style="color:#dc2626;font-weight:600">'+_pd.erros+' erro</span>':'')
+          +(_e!=='liberados'?'<button class="btn btn-sm" style="font-size:.66rem;padding:.12rem .55rem;background:#16a34a;color:#fff;border:none;margin-right:.25rem" onclick="empLiberarProcesso('+pr.id+')">Liberar</button>':'')
           +'<button class="btn btn-sm" style="font-size:.66rem;padding:.12rem .55rem" onclick="empAbrirProcesso('+pr.id+','+i+')">Checklist</button>'
          +'</div>';
       }).join('')+(_pcs.length>6?'<div style="font-size:.68rem;color:var(--text3);text-align:center">+'+(_pcs.length-6)+' mais</div>':'')+'</div>';
@@ -9534,6 +9536,17 @@ function renderEmpresasDashStats() {
     return false;
   };
   window.empAbrirProcesso = function(procId, empIdx){ if(typeof empAbrirChecklist==='function') empAbrirChecklist(empIdx); };
+  window.empLiberarProcesso = async function(procId){
+    if(!confirm('Marcar este processo como conferido e mover para Liberados?')) return;
+    try{
+      var cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}'); if(!cfg.url) return;
+      var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+      var tok=(await tk.json()).access_token;
+      var r=await fetch(cfg.url+'/api/v1/processos/'+procId+'/conferir',{method:'POST',headers:{'Authorization':'Bearer '+tok}});
+      if(r.ok){ if(typeof showToast==='function') showToast('Processo liberado','#16a34a'); if(window.liaLoadStats) window.liaLoadStats(true); }
+      else { if(typeof showToast==='function') showToast('Erro ao liberar processo','#dc2626'); }
+    }catch(e){ if(typeof showToast==='function') showToast('Erro: '+e,'#dc2626'); }
+  };
   window.liaLoadStats = async function(force){
     try{
       if(!force && Date.now()-(window._liaStatsTs||0) < 20000) return;
