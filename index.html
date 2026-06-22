@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.1';
+  const APP_VERSION = '1.9.2';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.2', data: '2026-06-22', desc: 'Botao Checklist do processo abre o checklist filtrado so com os periodos daquele processo (com banner Processo #X, Liberar e Ver empresa toda).' },
   { ver: '1.9.1', data: '2026-06-22', desc: 'Botao Liberar no painel de cada processo: marca como conferido e move para Liberados de uma vez (conferido geral), salvo no backend e compartilhado.' },
   { ver: '1.9.0', data: '2026-06-22', desc: 'Checklist mostra a data de transmissao (ECF e Contribuicoes) e compara com o vencimento legal em dias uteis: marca no prazo ou Xd de atraso. ECD e EFD ICMS/IPI ficam so com o vencimento.' },
   { ver: '1.8.7', data: '2026-06-19', desc: 'Card mostra os processos (solicitacoes) empilhados: cada um com data, etapa (Download/Conferencia/Liberados) e contagem, lendo do backend. Botao Checklist por processo.' },
@@ -8382,6 +8383,7 @@ async function _execRemoverEmp(i) {
 var _empClIdx = -1;
 
 function empAbrirChecklist(i) {
+  window._empProcFiltro = window._empProcPendente || null; window._empProcPendente = null;
   _empClIdx = i;
   const emp = getEmpresas()[i];
   if (!emp) return;
@@ -8423,13 +8425,20 @@ function empRenderChecklist() {
     ${_temBaixado ? `<button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>` : `<span style="font-size:.72rem;color:var(--text3)" title="CSV disponível após o primeiro download">📊 CSV (aguardando download)</span>`}
   </div>`;
 
-  el.innerHTML = toolbar + decls.map(d => {
+  var _procBanner = window._empProcFiltro ? '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;padding:.4rem .6rem;background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;font-size:.74rem"><span style="font-weight:700;color:#4338ca">\uD83D\uDCC1 Processo #'+(window._empProcId||'')+'</span><button onclick="empLiberarProcesso('+(window._empProcId||0)+')" style="margin-left:auto;font-size:.7rem;padding:.15rem .5rem;border-radius:6px;border:none;background:#16a34a;color:#fff;cursor:pointer">Liberar</button><button onclick="window._empProcPendente=null;window._empProcFiltro=null;empRenderChecklist()" style="font-size:.7rem;padding:.15rem .5rem;border-radius:6px;border:1px solid #c7d2fe;background:#fff;color:#4338ca;cursor:pointer">Ver empresa toda</button></div>' : '';
+  el.innerHTML = toolbar + _procBanner + decls.map(d => {
     const allPeriods = empGetPeriods(d);
+    if (window._empProcFiltro && !allPeriods.some(function(_pp){ return window._empProcFiltro[d.id + '|' + _pp]; })) return '';
     const isLia = (d.controle || 'lia') === 'lia';
     // Para LIA: mostra só os períodos já solicitados; para manual: todos
-    const periods = (isLia && LIA_TIPO_MAP[d.id])
-      ? allPeriods.filter(p => allLiaPedidos[cnpj14cl + '_' + d.id + '_' + p])
-      : allPeriods;
+    let periods;
+    if (window._empProcFiltro) {
+      periods = allPeriods.filter(function(_pp){ return window._empProcFiltro[d.id + '|' + _pp]; });
+    } else {
+      periods = (isLia && LIA_TIPO_MAP[d.id])
+        ? allPeriods.filter(p => allLiaPedidos[cnpj14cl + '_' + d.id + '_' + p])
+        : allPeriods;
+    }
 
     if (d.semPeriodo) return `<div style="margin-bottom:1.25rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
@@ -9535,7 +9544,7 @@ function renderEmpresasDashStats() {
     }catch(e){}
     return false;
   };
-  window.empAbrirProcesso = function(procId, empIdx){ if(typeof empAbrirChecklist==='function') empAbrirChecklist(empIdx); };
+  window.empAbrirProcesso = function(procId, empIdx){ var _pcs=(window._liaProcessos||{}); var _f=null; Object.keys(_pcs).forEach(function(k){ (_pcs[k]||[]).forEach(function(pr){ if(pr.id===procId && pr.periodos){ _f={}; pr.periodos.forEach(function(pp){ _f[pp.tipo+'|'+pp.competencia]=1; }); } }); }); window._empProcPendente=_f; window._empProcId=procId; if(typeof empAbrirChecklist==='function') empAbrirChecklist(empIdx); };
   window.empLiberarProcesso = async function(procId){
     if(!confirm('Marcar este processo como conferido e mover para Liberados?')) return;
     try{
