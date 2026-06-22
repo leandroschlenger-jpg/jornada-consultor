@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.7';
+  const APP_VERSION = '1.9.0';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.0', data: '2026-06-22', desc: 'Checklist mostra a data de transmissao (ECF e Contribuicoes) e compara com o vencimento legal em dias uteis: marca no prazo ou Xd de atraso. ECD e EFD ICMS/IPI ficam so com o vencimento.' },
   { ver: '1.8.7', data: '2026-06-19', desc: 'Card mostra os processos (solicitacoes) empilhados: cada um com data, etapa (Download/Conferencia/Liberados) e contagem, lendo do backend. Botao Checklist por processo.' },
   { ver: '1.8.6', data: '2026-06-19', desc: 'Sincronizacao so avisa quando algo muda (removido o aviso Nenhum status alterado que aparecia toda hora).' },
   { ver: '1.8.5', data: '2026-06-19', desc: 'Painel de downloads anteriores ficou compacto (resumo por solicitacao) para nao atrapalhar a nova solicitacao.' },
@@ -8169,28 +8170,44 @@ function empGetPeriods(decl) {
 
 // Retorna true se o prazo de entrega já passou para o período
 // periodo = 'YYYY' para ECD/ECF; 'MM/YYYY' para mensais
+function _liaFeriados(y){
+  var f=[[1,1],[4,21],[5,1],[9,7],[10,12],[11,2],[11,15],[12,25]];
+  var a=y%19,b=Math.floor(y/100),cc=y%100,d=Math.floor(b/4),e=b%4,g=Math.floor((8*b+13)/25),h=(19*a+b-d-g+15)%30,i=Math.floor(cc/4),k=cc%4,l=(32+2*e+2*i-h-k)%7,mm2=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*mm2+114)/31),da=((h+l-7*mm2+114)%31)+1;
+  var pa=new Date(y,mo-1,da);
+  function ad(n){var x=new Date(pa);x.setDate(x.getDate()+n);return [x.getMonth()+1,x.getDate()];}
+  f.push(ad(-48));f.push(ad(-47));f.push(ad(-2));f.push(ad(60));
+  var s={};f.forEach(function(p){s[p[0]+'-'+p[1]]=1;});return s;
+}
+function _liaDiaUtil(dt,fer){var w=dt.getDay();if(w===0||w===6)return false;return !fer[(dt.getMonth()+1)+'-'+dt.getDate()];}
+function _liaUltimoDiaUtil(y,m0){var d=new Date(y,m0+1,0);var fer=_liaFeriados(y);while(!_liaDiaUtil(d,fer))d.setDate(d.getDate()-1);d.setHours(23,59,59,999);return d;}
+function _liaNDiaUtil(y,m0,n){var t=new Date(y,m0,1);y=t.getFullYear();m0=t.getMonth();var fer=_liaFeriados(y);var d=new Date(y,m0,1);var cnt=0,guard=0;while(guard<40){if(_liaDiaUtil(d,fer)){cnt++;if(cnt>=n)break;}d.setDate(d.getDate()+1);guard++;}d.setHours(23,59,59,999);return d;}
+function empDataLimite(declId,periodo){
+  if(declId==='ecd'){var y=parseInt(periodo);return y?_liaUltimoDiaUtil(y+1,4):null;}
+  if(declId==='ecf'){var y=parseInt(periodo);return y?_liaUltimoDiaUtil(y+1,6):null;}
+  var pr=(periodo+'').split('/');var mm=parseInt(pr[0]),yy=parseInt(pr[1]);
+  if(!mm||!yy)return null;
+  if(declId==='efd_contrib'){var t=new Date(yy,(mm-1)+2,1);return _liaNDiaUtil(t.getFullYear(),t.getMonth(),10);}
+  if(declId==='efd_icms'){return new Date(yy,mm,25,23,59,59);}
+  return null;
+}
+function empTransmData(cnpj14,declId,periodo){
+  var tipo=(typeof LIA_TIPO_MAP!=='undefined')?LIA_TIPO_MAP[declId]:null; if(!tipo)return null;
+  var comp; if(declId==='ecd'||declId==='ecf'){comp=parseInt(periodo)+'-01';}else{var pr=(periodo+'').split('/');if(!pr[1])return null;comp=pr[1]+'-'+('0'+pr[0]).slice(-2);}
+  var m=(window._liaTransm||{})[cnpj14]; if(!m)return null;
+  var iso=m[tipo+'|'+comp]; return iso?new Date(iso):null;
+}
+function empTransmInfo(cnpj14,declId,periodo){
+  var dt=empTransmData(cnpj14,declId,periodo); if(!dt||isNaN(dt))return '';
+  var lim=empDataLimite(declId,periodo);
+  var ds=('0'+dt.getDate()).slice(-2)+'/'+('0'+(dt.getMonth()+1)).slice(-2)+'/'+dt.getFullYear();
+  var badge='';
+  if(lim){ if(dt<=lim){badge=' <span style="color:#16a34a;font-weight:700">no prazo</span>';} else {var dd=Math.ceil((dt-lim)/86400000);badge=' <span style="color:#dc2626;font-weight:700">'+dd+'d atraso</span>';} }
+  return '<span title="Data de transmissao a Receita" style="font-size:.66rem;color:var(--text3);white-space:nowrap">📤 '+ds+badge+'</span>';
+}
 function empDeadlinePassou(declId, periodo) {
-  var now = new Date();
-  if (declId === 'ecd') {
-    var y = parseInt(periodo);
-    return now > new Date(y + 1, 5, 30, 23, 59, 59); // 30/06 do ano seguinte
-  }
-  if (declId === 'ecf') {
-    var y = parseInt(periodo);
-    return now > new Date(y + 1, 6, 31, 23, 59, 59); // 31/07 do ano seguinte
-  }
-  var parts = (periodo + '').split('/');
-  var mm = parseInt(parts[0]); var yyyy = parseInt(parts[1]);
-  if (!mm || !yyyy) return true;
-  if (declId === 'efd_contrib') {
-    // ~15o dia util do 2o mes seguinte — usando dia 15 como referencia
-    return now > new Date(yyyy, mm + 1, 15, 23, 59, 59);
-  }
-  if (declId === 'efd_icms') {
-    // ~dia 25 do mes seguinte (varia por estado)
-    return now > new Date(yyyy, mm, 25, 23, 59, 59);
-  }
-  return true; // esocial e outros: sem prazo especial
+  var lim = empDataLimite(declId, periodo);
+  if (!lim) return true;
+  return new Date() > lim;
 }
 
 function empCard(e, i) {
@@ -8494,6 +8511,7 @@ function empRenderChecklist() {
           return '<div style="display:flex;align-items:center;gap:.5rem;padding:.3rem .4rem;border-radius:6px;background:var(--bg)">' +
             '<span style="font-size:.75rem;font-weight:600;color:var(--text2);min-width:52px">📅 ' + p + '</span>' +
             '<div style="flex:1">' + pill + '</div>' +
+            empTransmInfo(cnpj14cl, d.id, p) +
             (lp && liaStatus === 'CONCLUIDO' && lp.pedido_id ? '<button onclick="liaDownloadArquivo(\'' + lp.pedido_id + '\',' + _empClIdx + ')" title="Salvar arquivo" style="background:#10b981;color:#fff;border:none;border-radius:4px;padding:.15rem .45rem;font-size:.65rem;cursor:pointer;flex-shrink:0">⬇️</button>' : '') +
             '</div>';
         }).join('')}
@@ -9524,6 +9542,7 @@ function renderEmpresasDashStats() {
       var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
       var tok=(await tk.json()).access_token;
       try{ var _pr=await(await fetch(cfg.url+'/api/v1/processos',{headers:{'Authorization':'Bearer '+tok}})).json(); var _byc={}; ((_pr&&_pr.items)||[]).forEach(function(p){var k=p.cnpj||''; (_byc[k]=_byc[k]||[]).push(p);}); window._liaProcessos=_byc; }catch(e){}
+      try{ window._liaTransm=await(await fetch(cfg.url+'/api/v1/pedidos/transmissoes',{headers:{'Authorization':'Bearer '+tok}})).json(); }catch(e){}
       var s=await(await fetch(cfg.url+'/api/v1/pedidos/stats',{headers:{'Authorization':'Bearer '+tok}})).json();
       if(s && typeof s==='object'){
         var changed = JSON.stringify(s)!==JSON.stringify(window._liaStats||{});
