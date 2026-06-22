@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.2';
+  const APP_VERSION = '1.9.3';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.3', data: '2026-06-22', desc: 'CSV exportado ganhou as colunas Data Transmissão e Situação Entrega (no prazo/atrasado) para ECF e Contribuições.' },
   { ver: '1.9.2', data: '2026-06-22', desc: 'Botao Checklist do processo abre o checklist filtrado so com os periodos daquele processo (com banner Processo #X, Liberar e Ver empresa toda).' },
   { ver: '1.9.1', data: '2026-06-22', desc: 'Botao Liberar no painel de cada processo: marca como conferido e move para Liberados de uma vez (conferido geral), salvo no backend e compartilhado.' },
   { ver: '1.9.0', data: '2026-06-22', desc: 'Checklist mostra a data de transmissao (ECF e Contribuicoes) e compara com o vencimento legal em dias uteis: marca no prazo ou Xd de atraso. ECD e EFD ICMS/IPI ficam so com o vencimento.' },
@@ -8570,7 +8571,7 @@ function empExportarChecklist(empIdx) {
   var decls = (emp.declaracoes || []).filter(function(d){ return d.ativo; });
   var TIPOS_PRAZO = ['ecd','ecf','efd_contrib','efd_icms'];
 
-  var cabecalho = ['Empresa','CNPJ','Declaração','Período','Controle','Status LIA','Protocolo','Baixado','Conferido','Prazo','Retificador','Tamanho'];
+  var cabecalho = ['Empresa','CNPJ','Declaração','Período','Controle','Status LIA','Protocolo','Baixado','Conferido','Prazo','Retificador','Tamanho','Data Transmissão','Situação Entrega'];
   var linhas = [cabecalho];
 
   decls.forEach(function(d) {
@@ -8591,14 +8592,16 @@ function empExportarChecklist(empIdx) {
         s.conferido ? 'Sim' : 'Não',
         'N/A',
         s.retificador ? 'Sim' : 'Não',
-        'N/D'
+        'N/D',
+        '',
+        ''
       ]);
       return;
     }
 
     var periods = empGetPeriods(d);
     if (!periods.length) {
-      linhas.push([emp.razao_social||'', emp.cnpj||'', d.label, '(sem período configurado)', isLia?'LIA':'Manual','-','-','-','-','-','-','-']);
+      linhas.push([emp.razao_social||'', emp.cnpj||'', d.label, '(sem período configurado)', isLia?'LIA':'Manual','-','-','-','-','-','-','-','','']);
       return;
     }
 
@@ -8608,6 +8611,10 @@ function empExportarChecklist(empIdx) {
       var ped = pedidos[key] || {};
       var prazoTxt = 'N/A';
       if (temPrazo) prazoTxt = empDeadlinePassou(d.id, p) ? 'Vencido' : 'Dentro do prazo';
+      var _tdt = (typeof empTransmData==='function') ? empTransmData(cnpj14, d.id, p) : null;
+      var _tdtTxt = (_tdt && !isNaN(_tdt)) ? (('0'+_tdt.getDate()).slice(-2)+'/'+('0'+(_tdt.getMonth()+1)).slice(-2)+'/'+_tdt.getFullYear()) : '';
+      var _sitTxt = '';
+      if (_tdt && !isNaN(_tdt)) { var _lim = (typeof empDataLimite==='function') ? empDataLimite(d.id, p) : null; if (_lim) { _sitTxt = (_tdt <= _lim) ? 'No prazo' : ('Atrasado ' + Math.ceil((_tdt-_lim)/86400000) + 'd'); } }
       linhas.push([
         emp.razao_social || '',
         emp.cnpj || '',
@@ -8620,7 +8627,9 @@ function empExportarChecklist(empIdx) {
         s.conferido ? 'Sim' : 'Não',
         prazoTxt,
         s.retificador ? 'Sim' : 'Não',
-        'N/D'
+        'N/D',
+        _tdtTxt,
+        _sitTxt
       ]);
     });
   });
