@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.8.6';
+  const APP_VERSION = '1.8.7';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.8.7', data: '2026-06-19', desc: 'Card mostra os processos (solicitacoes) empilhados: cada um com data, etapa (Download/Conferencia/Liberados) e contagem, lendo do backend. Botao Checklist por processo.' },
   { ver: '1.8.6', data: '2026-06-19', desc: 'Sincronizacao so avisa quando algo muda (removido o aviso Nenhum status alterado que aparecia toda hora).' },
   { ver: '1.8.5', data: '2026-06-19', desc: 'Painel de downloads anteriores ficou compacto (resumo por solicitacao) para nao atrapalhar a nova solicitacao.' },
   { ver: '1.8.4', data: '2026-06-19', desc: 'Auto-atualizacao do card nao re-renderiza mais enquanto ha um modal/tela aberta (corrige telas fechando sozinhas durante downloads).' },
@@ -8268,6 +8269,23 @@ function empCard(e, i) {
       </div>
     </div>` : '')}
 
+    ${(function(){
+      var _pcs=(window._liaProcessos||{})[_cnpj14c]||[];
+      if(!_pcs.length) return '';
+      var _ec={download:'#6366f1',conferencia:'#f59e0b',liberados:'#16a34a'};
+      var _el={download:'Download',conferencia:'Conferencia',liberados:'Liberados'};
+      return '<div style="margin:.4rem 0;display:flex;flex-direction:column;gap:.25rem">'+_pcs.slice(0,6).map(function(pr){
+        var _dt=pr.criado_em?new Date(pr.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
+        var _pd=pr.pedidos||{}; var _e=pr.etapa||'download';
+        return '<div style="display:flex;align-items:center;gap:.4rem;padding:.3rem .5rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:.72rem">'
+          +'<span style="padding:.08rem .45rem;border-radius:99px;background:'+(_ec[_e]||'#6366f1')+'22;color:'+(_ec[_e]||'#6366f1')+';font-weight:700">'+(_el[_e]||_e)+'</span>'
+          +'<span style="color:var(--text2)">'+_dt+'</span>'
+          +'<span style="margin-left:auto;color:#16a34a;font-weight:600">'+(_pd.concluidos||0)+'/'+(_pd.total||0)+'</span>'
+          +(_pd.erros?'<span style="color:#dc2626;font-weight:600">'+_pd.erros+' erro</span>':'')
+          +'<button class="btn btn-sm" style="font-size:.66rem;padding:.12rem .55rem" onclick="empAbrirProcesso('+pr.id+','+i+')">Checklist</button>'
+         +'</div>';
+      }).join('')+(_pcs.length>6?'<div style="font-size:.68rem;color:var(--text3);text-align:center">+'+(_pcs.length-6)+' mais</div>':'')+'</div>';
+    })()}
     <!-- Actions -->
     <div style="display:flex;gap:.5rem;margin-top:.25rem;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" style="flex:1" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
@@ -9497,6 +9515,7 @@ function renderEmpresasDashStats() {
     }catch(e){}
     return false;
   };
+  window.empAbrirProcesso = function(procId, empIdx){ if(typeof empAbrirChecklist==='function') empAbrirChecklist(empIdx); };
   window.liaLoadStats = async function(force){
     try{
       if(!force && Date.now()-(window._liaStatsTs||0) < 20000) return;
@@ -9504,6 +9523,7 @@ function renderEmpresasDashStats() {
       var cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}'); if(!cfg.url) return;
       var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
       var tok=(await tk.json()).access_token;
+      try{ var _pr=await(await fetch(cfg.url+'/api/v1/processos',{headers:{'Authorization':'Bearer '+tok}})).json(); var _byc={}; ((_pr&&_pr.items)||[]).forEach(function(p){var k=p.cnpj||''; (_byc[k]=_byc[k]||[]).push(p);}); window._liaProcessos=_byc; }catch(e){}
       var s=await(await fetch(cfg.url+'/api/v1/pedidos/stats',{headers:{'Authorization':'Bearer '+tok}})).json();
       if(s && typeof s==='object'){
         var changed = JSON.stringify(s)!==JSON.stringify(window._liaStats||{});
