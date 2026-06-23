@@ -1530,7 +1530,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.11';
+  const APP_VERSION = '1.9.12';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5494,6 +5494,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.12', data: '2026-06-22', desc: 'Diferenciado no checklist: Limpar local (so marcas deste navegador) x Zerar banco (apaga pedidos/processos no servidor).' },
   { ver: '1.9.11', data: '2026-06-22', desc: 'Botao Zerar banco no checklist (admin): apaga os pedidos e processos da empresa no servidor, liberando para baixar tudo de novo.' },
   { ver: '1.9.10', data: '2026-06-22', desc: 'Checklist nao lista mais periodos cujo prazo ainda nao venceu e que nao foram entregues (obrigacoes futuras nao exigiveis ainda).' },
   { ver: '1.9.9', data: '2026-06-22', desc: 'Checklist mostra, abaixo da abertura, a data de saida do Simples Nacional (ou Optante / Nunca foi Simples), via BrasilAPI. Explica periodos antigos sem EFD.' },
@@ -8436,7 +8437,7 @@ function empRenderChecklist() {
 
   const toolbar = `<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;padding-bottom:.75rem;border-bottom:1px solid var(--border);flex-wrap:wrap">
     ${getSession().admin ? `<button onclick="empAbrirLiaSelect(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #16a34a;background:#f0fdf4;color:#16a34a;font-size:.78rem;font-weight:700;cursor:pointer">📥 Solicitar</button>
-    <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer">🗑 Limpar</button>` : ''}
+    <button onclick="empLimparPedidos(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #dc2626;background:#fef2f2;color:#dc2626;font-size:.78rem;font-weight:700;cursor:pointer" title="Limpa so as marcas deste navegador; nao apaga do servidor">🗑 Limpar local</button>` : ''}
     <div style="flex:1"></div>
     ${_temBaixado ? `<button onclick="empExportarChecklist(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #2563eb;background:#eff6ff;color:#2563eb;font-size:.78rem;font-weight:700;cursor:pointer">📊 Exportar CSV</button>` : `<span style="font-size:.72rem;color:var(--text3)" title="CSV disponível após o primeiro download">📊 CSV (aguardando download)</span>`}
   </div>`;
