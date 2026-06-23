@@ -1530,7 +1530,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.12';
+  const APP_VERSION = '1.9.13';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5494,6 +5494,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.13', data: '2026-06-22', desc: 'No cadastro/edicao da empresa, um seletor Periodo (todas) no topo preenche o inicio/fim de todas as declaracoes de uma vez. Campos por declaracao continuam editaveis.' },
   { ver: '1.9.12', data: '2026-06-22', desc: 'Diferenciado no checklist: Limpar local (so marcas deste navegador) x Zerar banco (apaga pedidos/processos no servidor).' },
   { ver: '1.9.11', data: '2026-06-22', desc: 'Botao Zerar banco no checklist (admin): apaga os pedidos e processos da empresa no servidor, liberando para baixar tudo de novo.' },
   { ver: '1.9.10', data: '2026-06-22', desc: 'Checklist nao lista mais periodos cujo prazo ainda nao venceu e que nao foram entregues (obrigacoes futuras nao exigiveis ainda).' },
@@ -6173,7 +6174,8 @@ function renderDeclList() {
     el.innerHTML = '<div class="text-muted text-sm" style="padding:1rem 0">Nenhuma declaração registrada. Faça uma varredura de pasta na aba Varredura.</div>';
     return;
   }
-  el.innerHTML = decls.map((d, i) => {
+  var _g0 = decls.filter(function(d){return d.inicio&&d.fim;})[0]||{};
+  el.innerHTML = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:.6rem .9rem;margin-bottom:.6rem;display:flex;align-items:center;gap:.45rem;flex-wrap:wrap"><span style="font-size:.74rem;font-weight:700;color:var(--text2)">📅 Periodo (todas):</span><input id="emp-periodo-global-ini" class="input" placeholder="01/2021" value="'+(_g0.inicio||'')+'" style="width:84px;font-size:.78rem;padding:.3rem .4rem"><span style="color:var(--text3)">→</span><input id="emp-periodo-global-fim" class="input" placeholder="12/2026" value="'+(_g0.fim||'')+'" style="width:84px;font-size:.78rem;padding:.3rem .4rem"><button onclick="empAplicarPeriodoTodas()" style="padding:.3rem .7rem;border-radius:7px;border:none;background:var(--primary);color:#fff;font-size:.74rem;font-weight:700;cursor:pointer">Aplicar a todas</button></div>' + decls.map((d, i) => {
     const hasAlert = d.alerta || d.semMovimento || d.tamanhoSuspect;
     const alertMsg = [d.alerta, d.semMovimento?'Sem movimento':'', d.tamanhoSuspect?'Tamanho suspeito':''].filter(Boolean).join(' · ');
     return `<div class="periodo-card" style="border-left:3px solid ${hasAlert?'var(--danger)':'var(--success)'}">
@@ -7870,6 +7872,18 @@ async function empBuscarCnpj() {
 }
 
 // ── DECLARATION LIST EDITOR ───────────────────────────────────────────
+window.empAplicarPeriodoTodas = function(){
+  var gi=((document.getElementById('emp-periodo-global-ini')||{}).value||'').trim();
+  var gf=((document.getElementById('emp-periodo-global-fim')||{}).value||'').trim();
+  if(!gi||!gf){ if(typeof showToast==='function') showToast('Preencha inicio e fim (MM/AAAA)','#dc2626'); return; }
+  document.querySelectorAll('.emp-decl-row').forEach(function(row){
+    var ini=row.querySelector('.emp-decl-inicio'); var fim=row.querySelector('.emp-decl-fim');
+    if(ini) ini.value=gi; if(fim) fim.value=gf;
+    var i=row.getAttribute('data-idx'); var badge=document.getElementById('emp-period-badge-'+i);
+    if(badge && ini && fim) badge.textContent=gi+' → '+gf;
+  });
+  if(typeof showToast==='function') showToast('Periodo aplicado a todas as declaracoes','#16a34a');
+};
 function empRenderDeclsList(decls) {
   decls = empAplicarPrescricional(decls);
   const el = document.getElementById('emp-decls-list');
