@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.7';
+  const APP_VERSION = '1.9.8';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.8', data: '2026-06-22', desc: 'Checklist recarrega os dados do banco ao abrir, corrigindo o resumo que as vezes mostrava tudo pendente (ex: 61 pendentes) mesmo com arquivos ja baixados.' },
   { ver: '1.9.7', data: '2026-06-22', desc: 'Cartao da empresa redesenhado: mais limpo e espacado (avatar com iniciais, divisorias no lugar de caixas, processos em linhas leves), mantendo progresso, processos e acoes.' },
   { ver: '1.9.6', data: '2026-06-22', desc: 'Checklist mostra a data de abertura da empresa (consulta BrasilAPI) e marca os periodos anteriores a abertura como Antes da abertura, em vez de erro/pendente.' },
   { ver: '1.9.5', data: '2026-06-22', desc: 'Checklist agora lista todas as competencias solicitadas (lendo do backend, /pedidos/periodos) com o status real de cada uma, sem pular periodos que nao estavam no navegador.' },
@@ -8382,7 +8383,7 @@ async function _execRemoverEmp(i) {
 // ── CHECKLIST MODAL ───────────────────────────────────────────────────
 var _empClIdx = -1;
 
-function empAbrirChecklist(i) {
+async function empAbrirChecklist(i) {
   window._empProcFiltro = window._empProcPendente || null; window._empProcPendente = null;
   _empClIdx = i;
   const emp = getEmpresas()[i];
@@ -8390,6 +8391,7 @@ function empAbrirChecklist(i) {
   document.getElementById('emp-cl-empresa-name').textContent = (emp.razao_social || emp.cnpj || '');
   document.getElementById('emp-checklist-overlay').style.display = 'flex';
   empRenderChecklist();
+  if (window.liaLoadStats) { try { await window.liaLoadStats(true); if (_empClIdx === i) empRenderChecklist(); } catch(e){} }
 }
 
 function empFecharChecklist() {
