@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.4';
+  const APP_VERSION = '1.9.5';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.5', data: '2026-06-22', desc: 'Checklist agora lista todas as competencias solicitadas (lendo do backend, /pedidos/periodos) com o status real de cada uma, sem pular periodos que nao estavam no navegador.' },
   { ver: '1.9.4', data: '2026-06-22', desc: 'Baixado manualmente: cada periodo pendente do checklist tem botao Manual para anexar um arquivo (e-CAC/SEFAZ); ele sobe pro VM e banco e o periodo fica marcado como baixado e baixavel pela seta.' },
   { ver: '1.9.3', data: '2026-06-22', desc: 'CSV exportado ganhou as colunas Data Transmissão e Situação Entrega (no prazo/atrasado) para ECF e Contribuições.' },
   { ver: '1.9.2', data: '2026-06-22', desc: 'Botao Checklist do processo abre o checklist filtrado so com os periodos daquele processo (com banner Processo #X, Liberar e Ver empresa toda).' },
@@ -8415,6 +8416,16 @@ function empRenderChecklist() {
   const cl = emp.checklist || {};
   const cnpj14cl = (emp.cnpj || '').replace(/\D/g, '');
   const allLiaPedidos = ls('jdc_lia_pedidos', {});
+  (function(){ try{
+    var bp=(window._liaPeriodos||{})[cnpj14cl]; if(!bp) return;
+    var rev={EFD_ICMS_IPI:'efd_icms',EFD_CONTRIBUICOES:'efd_contrib',ECD:'ecd',ECF:'ecf'};
+    Object.keys(bp).forEach(function(k){
+      var parts=k.split('|'); var declId=rev[parts[0]]; var comp=parts[1]||''; if(!declId) return;
+      var period; if(declId==='ecd'||declId==='ecf'){ period=comp.slice(0,4); } else { var ym=comp.split('-'); if(ym.length<2) return; period=ym[1]+'/'+ym[0]; }
+      var fk=cnpj14cl+'_'+declId+'_'+period; var cur=allLiaPedidos[fk];
+      allLiaPedidos[fk]={status:bp[k].status, pedido_id:(cur&&cur.pedido_id)||bp[k].pedido_id, manual:cur&&cur.manual};
+    });
+  }catch(e){} })();
 
   // Verificar se há algum período baixado para habilitar CSV
   let _temBaixado = false;
@@ -9606,6 +9617,7 @@ function renderEmpresasDashStats() {
       var tok=(await tk.json()).access_token;
       try{ var _pr=await(await fetch(cfg.url+'/api/v1/processos',{headers:{'Authorization':'Bearer '+tok}})).json(); var _byc={}; ((_pr&&_pr.items)||[]).forEach(function(p){var k=p.cnpj||''; (_byc[k]=_byc[k]||[]).push(p);}); window._liaProcessos=_byc; }catch(e){}
       try{ window._liaTransm=await(await fetch(cfg.url+'/api/v1/pedidos/transmissoes',{headers:{'Authorization':'Bearer '+tok}})).json(); }catch(e){}
+      try{ window._liaPeriodos=await(await fetch(cfg.url+'/api/v1/pedidos/periodos',{headers:{'Authorization':'Bearer '+tok}})).json(); }catch(e){}
       var s=await(await fetch(cfg.url+'/api/v1/pedidos/stats',{headers:{'Authorization':'Bearer '+tok}})).json();
       if(s && typeof s==='object'){
         var changed = JSON.stringify(s)!==JSON.stringify(window._liaStats||{});
