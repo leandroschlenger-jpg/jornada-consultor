@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.6';
+  const APP_VERSION = '1.9.7';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.7', data: '2026-06-22', desc: 'Cartao da empresa redesenhado: mais limpo e espacado (avatar com iniciais, divisorias no lugar de caixas, processos em linhas leves), mantendo progresso, processos e acoes.' },
   { ver: '1.9.6', data: '2026-06-22', desc: 'Checklist mostra a data de abertura da empresa (consulta BrasilAPI) e marca os periodos anteriores a abertura como Antes da abertura, em vez de erro/pendente.' },
   { ver: '1.9.5', data: '2026-06-22', desc: 'Checklist agora lista todas as competencias solicitadas (lendo do backend, /pedidos/periodos) com o status real de cada uma, sem pular periodos que nao estavam no navegador.' },
   { ver: '1.9.4', data: '2026-06-22', desc: 'Baixado manualmente: cada periodo pendente do checklist tem botao Manual para anexar um arquivo (e-CAC/SEFAZ); ele sobe pro VM e banco e o periodo fica marcado como baixado e baixavel pela seta.' },
@@ -8242,82 +8243,77 @@ function empCard(e, i) {
   const _liaConc = _bk ? (_bk.concluidos||0) : _todosP.filter(([,v]) => v.status === 'CONCLUIDO').length;
   const _liaTem = _bk ? (_bk.total>0) : (_todosP.length > 0);
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.25rem;box-shadow:var(--sh);display:flex;flex-direction:column;gap:.75rem">
-    <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.5rem">
-      <div style="flex:1;min-width:0;cursor:pointer" onclick="empAbrirModal(${i})" title="Clique para editar empresa">
-        <div style="font-size:.68rem;font-weight:700;color:var(--primary);letter-spacing:.06em">${_fmtCnpj(e.cnpj||'')}</div>
-        <div style="font-weight:800;font-size:.95rem;color:var(--text);line-height:1.3;margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.razao_social||e.nome_fantasia||'—')}</div>
-        ${e.nome_fantasia && e.nome_fantasia !== e.razao_social ? `<div style="font-size:.75rem;color:var(--text3)">${esc(e.nome_fantasia)}</div>` : ''}
+  const _ini = (e.razao_social||e.nome_fantasia||'?').trim().split(/\s+/).filter(Boolean).slice(0,2).map(function(w){return (w[0]||'').toUpperCase();}).join('') || '-';
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:1.4rem;box-shadow:var(--sh)">
+    <div style="display:flex;align-items:flex-start;gap:.7rem">
+      <div style="width:44px;height:44px;border-radius:12px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0">${_ini}</div>
+      <div style="flex:1;min-width:0;cursor:pointer;padding-top:1px" onclick="empAbrirModal(${i})" title="Clique para editar empresa">
+        <div style="font-weight:800;font-size:.95rem;color:var(--text);line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(e.razao_social||e.nome_fantasia||'—')}</div>
+        <div style="font-size:.72rem;color:var(--text3);letter-spacing:.03em;margin-top:.2rem">${_fmtCnpj(e.cnpj||'')}</div>
+        <div style="font-size:.72rem;color:var(--text2);margin-top:.45rem;display:flex;align-items:center;gap:.35rem;flex-wrap:wrap">
+          ${e.municipio ? `<span>📍 ${esc(e.municipio)}${e.uf?'/'+e.uf:''}</span><span style="color:var(--border)">·</span>` : ''}
+          <span style="color:${cor};font-weight:600">${sit}</span>
+        </div>
       </div>
-      <div style="display:flex;gap:.25rem">
-        <button onclick="event.stopPropagation();empConfirmarRemover(${i})" style="background:none;border:1px solid var(--border);border-radius:8px;padding:.3rem .55rem;cursor:pointer;font-size:.78rem;color:var(--text3)" title="Remover empresa">✕</button>
-      </div>
+      <button onclick="event.stopPropagation();empConfirmarRemover(${i})" style="background:none;border:none;border-radius:8px;padding:.25rem;cursor:pointer;font-size:.85rem;color:var(--text3);flex-shrink:0" title="Remover empresa">✕</button>
     </div>
-
-    <!-- Badges -->
-    <div style="display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
-      <span style="background:${cor}20;color:${cor};font-size:.68rem;font-weight:700;padding:.18rem .5rem;border-radius:99px">${sit}</span>
-      ${e.municipio ? `<span style="font-size:.7rem;color:var(--text3)">📍 ${esc(e.municipio)}${e.uf?'/'+e.uf:''}</span>` : ''}
-      ${e.atividade_principal && e.atividade_principal[0] ? `<span style="font-size:.7rem;color:var(--text3)">${esc(e.atividade_principal[0].text.substring(0,45))}…</span>` : ''}
-    </div>
-
-    <!-- Barra de progresso LIA (baseada em pedidos solicitados) -->
     ${_liaTem ? (() => {
       const _total = _todosTot;
       const _concP = _liaConc;
       const _pct2  = _total ? Math.round(_concP / _total * 100) : 0;
       const _barColor = _concP === _total ? '#10b981' : _liaAtivos > 0 ? '#6366f1' : '#f59e0b';
-      return `<div onclick="empAbrirChecklist(${i})" title="Clique para abrir o checklist" style="cursor:pointer;padding:.5rem .7rem;border-radius:8px;background:var(--bg);border:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;margin-bottom:.35rem;align-items:center">
-          <span style="font-size:.72rem;font-weight:700;color:var(--text2)">📥 Downloads LIA</span>
-          <span style="font-size:.72rem;font-weight:700;color:${_barColor}">${_concP}/${_total} · ${_pct2}%</span>
+      return `<div style="height:1px;background:var(--border);margin:1.1rem 0"></div>
+      <div onclick="empAbrirChecklist(${i})" title="Abrir checklist" style="cursor:pointer">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+          <span style="font-size:.74rem;color:var(--text2)">Downloads LIA</span>
+          <span style="font-size:.8rem;font-weight:700;color:var(--text)">${_concP} <span style="color:var(--text3);font-weight:500">/ ${_total}</span></span>
         </div>
-        <div style="background:var(--border);border-radius:99px;height:8px;overflow:hidden;margin-bottom:.35rem">
-          <div style="width:${_pct2}%;background:${_barColor};height:8px;border-radius:99px;transition:.5s"></div>
+        <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden">
+          <div style="width:${_pct2}%;background:${_barColor};height:6px;border-radius:99px;transition:.5s"></div>
         </div>
-        <div style="display:flex;gap:.6rem;font-size:.68rem;flex-wrap:wrap">
-          ${_liaAtivos ? `<span style="color:#6366f1">⏳ ${_liaAtivos} em andamento</span>` : ''}
-          ${_liaConc   ? `<span style="color:#10b981">✅ ${_liaConc} concluídos</span>`    : ''}
-          ${_liaErros  ? `<span style="color:#ef4444">❌ ${_liaErros} erros</span>`         : ''}
+        <div style="font-size:.68rem;color:var(--text3);margin-top:.45rem;display:flex;gap:.4rem;flex-wrap:wrap;align-items:center">
+          <span>${_pct2}% concluído</span>
+          ${_liaAtivos ? `<span style="color:var(--border)">·</span><span style="color:#6366f1">${_liaAtivos} em andamento</span>` : ''}
+          ${_liaErros  ? `<span style="color:var(--border)">·</span><span style="color:#ef4444">${_liaErros} com erro</span>` : ''}
         </div>
       </div>`;
-    })() : (totalPeriods > 0 ? `<div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:.3rem">
-        <span style="font-size:.72rem;color:var(--text3)">Downloads</span>
-        <span style="font-size:.72rem;font-weight:700;color:${progColor}">${baixados}/${totalPeriods} períodos</span>
+    })() : (totalPeriods > 0 ? `<div style="height:1px;background:var(--border);margin:1.1rem 0"></div>
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:.4rem">
+        <span style="font-size:.74rem;color:var(--text2)">Downloads</span>
+        <span style="font-size:.8rem;font-weight:700;color:${progColor}">${baixados}/${totalPeriods}</span>
       </div>
       <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden">
         <div style="width:${pct}%;background:${progColor};height:6px;border-radius:99px;transition:.4s"></div>
       </div>
     </div>` : '')}
-
     ${(function(){
       var _pcs=(window._liaProcessos||{})[_cnpj14c]||[];
       if(!_pcs.length) return '';
       var _ec={download:'#6366f1',conferencia:'#f59e0b',liberados:'#16a34a'};
-      var _el={download:'Download',conferencia:'Conferencia',liberados:'Liberados'};
-      return '<div style="margin:.4rem 0;display:flex;flex-direction:column;gap:.25rem">'+_pcs.slice(0,6).map(function(pr){
+      var _el={download:'Download',conferencia:'Conferência',liberados:'Liberados'};
+      return '<div style="height:1px;background:var(--border);margin:1.1rem 0"></div>'
+        +'<div style="font-size:.66rem;color:var(--text3);margin-bottom:.15rem">Processos</div>'
+        +_pcs.slice(0,6).map(function(pr,_ix){
         var _dt=pr.criado_em?new Date(pr.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'-';
-        var _pd=pr.pedidos||{}; var _e=pr.etapa||'download';
-        return '<div style="display:flex;align-items:center;gap:.4rem;padding:.3rem .5rem;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:.72rem">'
-          +'<span style="padding:.08rem .45rem;border-radius:99px;background:'+(_ec[_e]||'#6366f1')+'22;color:'+(_ec[_e]||'#6366f1')+';font-weight:700">'+(_el[_e]||_e)+'</span>'
-          +'<span style="color:var(--text2)">'+_dt+'</span>'
-          +'<span style="margin-left:auto;color:#16a34a;font-weight:600">'+(_pd.concluidos||0)+'/'+(_pd.total||0)+'</span>'
-          +(_pd.erros?'<span style="color:#dc2626;font-weight:600">'+_pd.erros+' erro</span>':'')
-          +(_e!=='liberados'?'<button class="btn btn-sm" style="font-size:.66rem;padding:.12rem .55rem;background:#16a34a;color:#fff;border:none;margin-right:.25rem" onclick="empLiberarProcesso('+pr.id+')">Liberar</button>':'')
-          +'<button class="btn btn-sm" style="font-size:.66rem;padding:.12rem .55rem" onclick="empAbrirProcesso('+pr.id+','+i+')">Checklist</button>'
+        var _pd=pr.pedidos||{}; var _e=pr.etapa||'download'; var _co=_ec[_e]||'#6366f1';
+        return '<div style="display:flex;align-items:center;gap:.6rem;padding:.5rem 0;'+(_ix?'border-top:1px solid var(--border)':'')+'">'
+          +'<span style="padding:.12rem .55rem;border-radius:99px;background:'+_co+'1a;color:'+_co+';font-weight:700;font-size:.64rem;white-space:nowrap">'+(_el[_e]||_e)+'</span>'
+          +'<div style="flex:1;min-width:0">'
+            +'<div style="font-size:.74rem;font-weight:700;color:var(--text)">'+(_pd.concluidos||0)+'/'+(_pd.total||0)+(_pd.erros?' <span style="color:#dc2626;font-weight:500;font-size:.66rem">· '+_pd.erros+' erro</span>':'')+'</div>'
+            +'<div style="font-size:.64rem;color:var(--text3);margin-top:.05rem">'+_dt+'</div>'
+          +'</div>'
+          +(_e!=='liberados'?'<button style="font-size:.64rem;padding:.2rem .6rem;border-radius:7px;background:none;border:1px solid #86efac;color:#16a34a;font-weight:600;cursor:pointer" onclick="empLiberarProcesso('+pr.id+')">Liberar</button>':'')
+          +'<button style="padding:.2rem .35rem;border-radius:7px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:.78rem" title="Checklist" onclick="empAbrirProcesso('+pr.id+','+i+')">📋</button>'
          +'</div>';
-      }).join('')+(_pcs.length>6?'<div style="font-size:.68rem;color:var(--text3);text-align:center">+'+(_pcs.length-6)+' mais</div>':'')+'</div>';
+      }).join('')+(_pcs.length>6?'<div style="font-size:.64rem;color:var(--text3);text-align:center;margin-top:.3rem">+'+(_pcs.length-6)+' mais</div>':'');
     })()}
-    <!-- Actions -->
-    <div style="display:flex;gap:.5rem;margin-top:.25rem;flex-wrap:wrap">
-      <button class="btn btn-primary btn-sm" style="flex:1" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
-      ${getSession().admin ? `<button class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac;font-size:.75rem;padding:.35rem .7rem;border-radius:8px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect(${i})" title="Solicitar download LIA — selecionar declarações e período">📥 Baixar LIA</button>` : ''}
+    <div style="display:flex;gap:.5rem;margin-top:1.1rem">
+      <button class="btn btn-primary btn-sm" style="flex:1;padding:.55rem;border-radius:10px" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
+      ${getSession().admin ? `<button style="flex:1;background:var(--surface);color:#16a34a;border:1.5px solid #86efac;font-weight:700;font-size:.8rem;padding:.55rem;border-radius:10px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect(${i})" title="Solicitar download LIA">📥 Baixar LIA</button>` : ''}
     </div>
   </div>`;
 }
-
 function empConfirmarRemover(i) {
   const emp = getEmpresas()[i];
   if (!emp) return;
