@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.5';
+  const APP_VERSION = '1.9.6';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.6', data: '2026-06-22', desc: 'Checklist mostra a data de abertura da empresa (consulta BrasilAPI) e marca os periodos anteriores a abertura como Antes da abertura, em vez de erro/pendente.' },
   { ver: '1.9.5', data: '2026-06-22', desc: 'Checklist agora lista todas as competencias solicitadas (lendo do backend, /pedidos/periodos) com o status real de cada uma, sem pular periodos que nao estavam no navegador.' },
   { ver: '1.9.4', data: '2026-06-22', desc: 'Baixado manualmente: cada periodo pendente do checklist tem botao Manual para anexar um arquivo (e-CAC/SEFAZ); ele sobe pro VM e banco e o periodo fica marcado como baixado e baixavel pela seta.' },
   { ver: '1.9.3', data: '2026-06-22', desc: 'CSV exportado ganhou as colunas Data Transmissão e Situação Entrega (no prazo/atrasado) para ECF e Contribuições.' },
@@ -8439,7 +8440,9 @@ function empRenderChecklist() {
   </div>`;
 
   var _procBanner = window._empProcFiltro ? '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;padding:.4rem .6rem;background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;font-size:.74rem"><span style="font-weight:700;color:#4338ca">\uD83D\uDCC1 Processo #'+(window._empProcId||'')+'</span><button onclick="empLiberarProcesso('+(window._empProcId||0)+')" style="margin-left:auto;font-size:.7rem;padding:.15rem .5rem;border-radius:6px;border:none;background:#16a34a;color:#fff;cursor:pointer">Liberar</button><button onclick="window._empProcPendente=null;window._empProcFiltro=null;empRenderChecklist()" style="font-size:.7rem;padding:.15rem .5rem;border-radius:6px;border:1px solid #c7d2fe;background:#fff;color:#4338ca;cursor:pointer">Ver empresa toda</button></div>' : '';
-  el.innerHTML = toolbar + _procBanner + decls.map(d => {
+  var _ab=(window._empAbertura||{})[cnpj14cl]; if(_ab===undefined && window.empFetchAbertura) window.empFetchAbertura(cnpj14cl);
+  var _abBanner=''; if(_ab && _ab!=='loading' && _ab!=='nd'){ var _abd=new Date(_ab); if(!isNaN(_abd)) _abBanner='<div style="font-size:.74rem;color:var(--text2);margin-bottom:.5rem;padding:.35rem .6rem;background:var(--bg);border:1px solid var(--border);border-radius:7px">🏢 Empresa aberta em <strong>'+(('0'+_abd.getDate()).slice(-2)+'/'+('0'+(_abd.getMonth()+1)).slice(-2)+'/'+_abd.getFullYear())+'</strong></div>'; }
+  el.innerHTML = toolbar + _procBanner + _abBanner + decls.map(d => {
     const allPeriods = empGetPeriods(d);
     if (window._empProcFiltro && !allPeriods.some(function(_pp){ return window._empProcFiltro[d.id + '|' + _pp]; })) return '';
     const isLia = (d.controle || 'lia') === 'lia';
@@ -8506,12 +8509,15 @@ function empRenderChecklist() {
         ${periods.map(p => {
           const s = dCl[p] || {};
           const prazoOk = !temPrazo || empDeadlinePassou(d.id, p);
+          var _abIso=(window._empAbertura||{})[cnpj14cl]; var _preAbertura=false; if(_abIso&&_abIso!=='loading'&&_abIso!=='nd'){ var _pe; if(d.id==='ecd'||d.id==='ecf'){ _pe=new Date(parseInt(p),11,31); } else { var _pm=(p+'').split('/'); _pe=new Date(parseInt(_pm[1]),parseInt(_pm[0]),0); } if(!isNaN(_pe) && _pe<new Date(_abIso)) _preAbertura=true; }
           const lp = liaPedidos[cnpj14cl + '_' + d.id + '_' + p] || null;
           const liaStatus = lp ? (lp.status || 'AGUARDANDO') : null;
 
           // Determinar fase/pill
           let pill = '';
-          if (!prazoOk) {
+          if (_preAbertura) {
+            pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:#f1f5f9;color:#94a3b8">🏢 Antes da abertura</span>';
+          } else if (!prazoOk) {
             pill = '<span style="font-size:.68rem;padding:.18rem .5rem;border-radius:99px;background:#fef3c7;color:#92400e;font-weight:600">⏰ Prazo pendente</span>';
           } else if (liaStatus && liaStatus !== 'CONCLUIDO' && liaStatus !== 'ERRO') {
             const liaCores = {AGUARDANDO:'#6366f1',PROCESSANDO:'#3b82f6',BAIXANDO:'#f59e0b'};
@@ -8574,6 +8580,18 @@ window.empUploadManual = function(empIdx, declId, periodo){
     }catch(e){ if(typeof showToast==='function') showToast('Erro: '+e,'#dc2626'); }
   };
   inp.click();
+};
+window.empFetchAbertura = async function(cnpj14){
+  if(!cnpj14) return;
+  window._empAbertura = window._empAbertura||{};
+  if(window._empAbertura[cnpj14] && window._empAbertura[cnpj14]!=='loading') return;
+  window._empAbertura[cnpj14]='loading';
+  try{
+    var res=await fetch('https://brasilapi.com.br/api/cnpj/v1/'+cnpj14);
+    var d=await res.json();
+    window._empAbertura[cnpj14]= d.data_inicio_atividade || d.data_abertura || 'nd';
+  }catch(e){ window._empAbertura[cnpj14]='nd'; }
+  if(typeof empRenderChecklist==='function' && typeof _empClIdx!=='undefined' && _empClIdx>=0) empRenderChecklist();
 };
 function empToggleCl(empIdx, declId, periodo, field, value) {
   const emps = getEmpresas();
