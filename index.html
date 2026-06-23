@@ -699,6 +699,7 @@ label.lbl{display:block;font-size:.78rem;font-weight:600;color:var(--text2);marg
           <div class="row-between" style="margin-bottom:1rem">
             <div class="card-title" style="margin:0">📥 Fila de Download</div>
             <button class="btn btn-secondary btn-sm" onclick="filaResetAll()">🗑 Limpar</button>
+    <button onclick="empZerarBanco(${_empClIdx})" style="display:flex;align-items:center;gap:.4rem;padding:.35rem .8rem;border-radius:7px;border:1.5px solid #b91c1c;background:#fee2e2;color:#b91c1c;font-size:.78rem;font-weight:700;cursor:pointer" title="Apaga os pedidos desta empresa no servidor (permite baixar de novo)">🧹 Zerar banco</button>
           </div>
           <div id="esocial-fila-list" class="stack">
             <div class="text-muted text-sm">Fila vazia.</div>
@@ -1529,7 +1530,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.10';
+  const APP_VERSION = '1.9.11';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5494,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.11', data: '2026-06-22', desc: 'Botao Zerar banco no checklist (admin): apaga os pedidos e processos da empresa no servidor, liberando para baixar tudo de novo.' },
   { ver: '1.9.10', data: '2026-06-22', desc: 'Checklist nao lista mais periodos cujo prazo ainda nao venceu e que nao foram entregues (obrigacoes futuras nao exigiveis ainda).' },
   { ver: '1.9.9', data: '2026-06-22', desc: 'Checklist mostra, abaixo da abertura, a data de saida do Simples Nacional (ou Optante / Nunca foi Simples), via BrasilAPI. Explica periodos antigos sem EFD.' },
   { ver: '1.9.8', data: '2026-06-22', desc: 'Checklist recarrega os dados do banco ao abrir, corrigindo o resumo que as vezes mostrava tudo pendente (ex: 61 pendentes) mesmo com arquivos ja baixados.' },
@@ -8594,6 +8596,25 @@ window.empFetchAbertura = async function(cnpj14){
     window._empSimples=window._empSimples||{}; window._empSimples[cnpj14]={opc:d.opcao_pelo_simples, opcDt:d.data_opcao_pelo_simples, exclDt:d.data_exclusao_do_simples};
   }catch(e){ window._empAbertura[cnpj14]='nd'; }
   if(typeof empRenderChecklist==='function' && typeof _empClIdx!=='undefined' && _empClIdx>=0) empRenderChecklist();
+};
+window.empZerarBanco = async function(empIdx){
+  var emp=getEmpresas()[empIdx]; if(!emp) return;
+  var cnpj14=(emp.cnpj||'').replace(/\D/g,'');
+  if(!confirm('ZERAR o banco de '+(emp.razao_social||cnpj14)+'?\n\nApaga TODOS os pedidos e processos desta empresa no servidor, liberando para baixar tudo de novo. Nao da pra desfazer.')) return;
+  try{
+    var cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}'); if(!cfg.url) return;
+    var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+    var tok=(await tk.json()).access_token;
+    var r=await fetch(cfg.url+'/api/v1/pedidos/por-cnpj/'+cnpj14,{method:'DELETE',headers:{'Authorization':'Bearer '+tok}});
+    if(r.ok){
+      var j=await r.json();
+      var lp=ls('jdc_lia_pedidos',{}); Object.keys(lp).forEach(function(k){ if(k.indexOf(cnpj14+'_')===0) delete lp[k]; }); lsSave('jdc_lia_pedidos',lp);
+      var emps=getEmpresas(); if(emps[empIdx]){ emps[empIdx].checklist={}; saveEmpresas(emps); }
+      if(typeof showToast==='function') showToast('Banco zerado: '+(j.pedidos_removidos||0)+' pedidos','#16a34a');
+      if(window.liaLoadStats) await window.liaLoadStats(true);
+      empRenderChecklist();
+    } else { if(typeof showToast==='function') showToast('Falha ao zerar ('+r.status+')','#dc2626'); }
+  }catch(e){ if(typeof showToast==='function') showToast('Erro: '+e,'#dc2626'); }
 };
 function empToggleCl(empIdx, declId, periodo, field, value) {
   const emps = getEmpresas();
