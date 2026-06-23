@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.8';
+  const APP_VERSION = '1.9.9';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.9', data: '2026-06-22', desc: 'Checklist mostra, abaixo da abertura, a data de saida do Simples Nacional (ou Optante / Nunca foi Simples), via BrasilAPI. Explica periodos antigos sem EFD.' },
   { ver: '1.9.8', data: '2026-06-22', desc: 'Checklist recarrega os dados do banco ao abrir, corrigindo o resumo que as vezes mostrava tudo pendente (ex: 61 pendentes) mesmo com arquivos ja baixados.' },
   { ver: '1.9.7', data: '2026-06-22', desc: 'Cartao da empresa redesenhado: mais limpo e espacado (avatar com iniciais, divisorias no lugar de caixas, processos em linhas leves), mantendo progresso, processos e acoes.' },
   { ver: '1.9.6', data: '2026-06-22', desc: 'Checklist mostra a data de abertura da empresa (consulta BrasilAPI) e marca os periodos anteriores a abertura como Antes da abertura, em vez de erro/pendente.' },
@@ -8439,7 +8440,7 @@ function empRenderChecklist() {
 
   var _procBanner = window._empProcFiltro ? '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem;padding:.4rem .6rem;background:#eef2ff;border:1px solid #c7d2fe;border-radius:7px;font-size:.74rem"><span style="font-weight:700;color:#4338ca">\uD83D\uDCC1 Processo #'+(window._empProcId||'')+'</span><button onclick="empLiberarProcesso('+(window._empProcId||0)+')" style="margin-left:auto;font-size:.7rem;padding:.15rem .5rem;border-radius:6px;border:none;background:#16a34a;color:#fff;cursor:pointer">Liberar</button><button onclick="window._empProcPendente=null;window._empProcFiltro=null;empRenderChecklist()" style="font-size:.7rem;padding:.15rem .5rem;border-radius:6px;border:1px solid #c7d2fe;background:#fff;color:#4338ca;cursor:pointer">Ver empresa toda</button></div>' : '';
   var _ab=(window._empAbertura||{})[cnpj14cl]; if(_ab===undefined && window.empFetchAbertura) window.empFetchAbertura(cnpj14cl);
-  var _abBanner=''; if(_ab && _ab!=='loading' && _ab!=='nd'){ var _abd=new Date(_ab); if(!isNaN(_abd)) _abBanner='<div style="font-size:.74rem;color:var(--text2);margin-bottom:.5rem;padding:.35rem .6rem;background:var(--bg);border:1px solid var(--border);border-radius:7px">🏢 Empresa aberta em <strong>'+(('0'+_abd.getDate()).slice(-2)+'/'+('0'+(_abd.getMonth()+1)).slice(-2)+'/'+_abd.getFullYear())+'</strong></div>'; }
+  var _abBanner=''; if(_ab && _ab!=='loading' && _ab!=='nd'){ var _abd=new Date(_ab); var _sm=(window._empSimples||{})[cnpj14cl]; var _smTxt=''; var _fd=function(x){var z=new Date(x); return isNaN(z)?'':(('0'+z.getDate()).slice(-2)+'/'+('0'+(z.getMonth()+1)).slice(-2)+'/'+z.getFullYear());}; if(_sm){ if(_sm.exclDt){ _smTxt='<span style="color:#dc2626">Saiu do Simples Nacional em '+_fd(_sm.exclDt)+'</span>'; } else if(_sm.opc){ _smTxt='<span style="color:#16a34a">Optante do Simples Nacional</span>'; } else if(_sm.opcDt){ _smTxt='Optante do Simples desde '+_fd(_sm.opcDt); } else { _smTxt='<span style="color:var(--text3)">Nunca foi Simples Nacional</span>'; } } if(!isNaN(_abd)) _abBanner='<div style="font-size:.74rem;color:var(--text2);margin-bottom:.5rem;padding:.35rem .6rem;background:var(--bg);border:1px solid var(--border);border-radius:7px">🏢 Empresa aberta em <strong>'+(('0'+_abd.getDate()).slice(-2)+'/'+('0'+(_abd.getMonth()+1)).slice(-2)+'/'+_abd.getFullYear())+'</strong>'+(_smTxt?'<div style="margin-top:.25rem;font-size:.7rem">'+_smTxt+'</div>':'')+'</div>'; }
   el.innerHTML = toolbar + _procBanner + _abBanner + decls.map(d => {
     const allPeriods = empGetPeriods(d);
     if (window._empProcFiltro && !allPeriods.some(function(_pp){ return window._empProcFiltro[d.id + '|' + _pp]; })) return '';
@@ -8588,6 +8589,7 @@ window.empFetchAbertura = async function(cnpj14){
     var res=await fetch('https://brasilapi.com.br/api/cnpj/v1/'+cnpj14);
     var d=await res.json();
     window._empAbertura[cnpj14]= d.data_inicio_atividade || d.data_abertura || 'nd';
+    window._empSimples=window._empSimples||{}; window._empSimples[cnpj14]={opc:d.opcao_pelo_simples, opcDt:d.data_opcao_pelo_simples, exclDt:d.data_exclusao_do_simples};
   }catch(e){ window._empAbertura[cnpj14]='nd'; }
   if(typeof empRenderChecklist==='function' && typeof _empClIdx!=='undefined' && _empClIdx>=0) empRenderChecklist();
 };
