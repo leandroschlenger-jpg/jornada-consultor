@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.15';
+  const APP_VERSION = '1.9.16';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.16', data: '2026-06-22', desc: 'Checklist nao lista mais periodos durante o Simples Nacional (ate a data de exclusao) nem anteriores a abertura da empresa.' },
   { ver: '1.9.15', data: '2026-06-22', desc: 'Removida a secao Processos do card da empresa (no card e no refresh), deixando o cartao mais limpo.' },
   { ver: '1.9.14', data: '2026-06-22', desc: 'Botao Limpar agora apaga tudo do banco (pedidos e processos no servidor), liberando para gerar de novo. Removido o botao Zerar banco separado.' },
   { ver: '1.9.13', data: '2026-06-22', desc: 'No cadastro/edicao da empresa, um seletor Periodo (todas) no topo preenche o inicio/fim de todas as declaracoes de uma vez. Campos por declaracao continuam editaveis.' },
@@ -8474,6 +8475,7 @@ function empRenderChecklist() {
         : allPeriods;
     }
     periods = periods.filter(function(_pp){ /* filtro nao-vencido */ var _dn=(cl[d.id]&&cl[d.id][_pp]&&cl[d.id][_pp].baixado)||((allLiaPedidos[cnpj14cl+'_'+d.id+'_'+_pp]||{}).status==='CONCLUIDO'); return _dn || empDeadlinePassou(d.id, _pp); });
+    periods = periods.filter(function(_pp){ /* filtro abertura/simples */ var _abi=(window._empAbertura||{})[cnpj14cl]; var _sm=(window._empSimples||{})[cnpj14cl]; var _pe; if(d.id==='ecd'||d.id==='ecf'){ _pe=new Date(parseInt(_pp),11,31); } else { var _pm=(_pp+'').split('/'); _pe=new Date(parseInt(_pm[1]),parseInt(_pm[0]),0); } if(isNaN(_pe)) return true; if(_abi&&_abi!=='loading'&&_abi!=='nd'){ var _ab=new Date(_abi); if(!isNaN(_ab)&&_pe<_ab) return false; } if(_sm){ var _ex=_sm.exclDt?new Date(_sm.exclDt):null; var _op=_sm.opcDt?new Date(_sm.opcDt):null; if(_ex&&!isNaN(_ex)&&_pe<=_ex&&(!_op||isNaN(_op)||_pe>=_op)) return false; if(!_ex&&_sm.opc&&_op&&!isNaN(_op)&&_pe>=_op) return false; } return true; });
 
     if (d.semPeriodo) return `<div style="margin-bottom:1.25rem">
       <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem">
