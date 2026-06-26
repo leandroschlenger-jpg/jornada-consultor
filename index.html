@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.14';
+  const APP_VERSION = '1.9.15';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.15', data: '2026-06-22', desc: 'Removida a secao Processos do card da empresa (no card e no refresh), deixando o cartao mais limpo.' },
   { ver: '1.9.14', data: '2026-06-22', desc: 'Botao Limpar agora apaga tudo do banco (pedidos e processos no servidor), liberando para gerar de novo. Removido o botao Zerar banco separado.' },
   { ver: '1.9.13', data: '2026-06-22', desc: 'No cadastro/edicao da empresa, um seletor Periodo (todas) no topo preenche o inicio/fim de todas as declaracoes de uma vez. Campos por declaracao continuam editaveis.' },
   { ver: '1.9.12', data: '2026-06-22', desc: 'Diferenciado no checklist: Limpar local (so marcas deste navegador) x Zerar banco (apaga pedidos/processos no servidor).' },
@@ -8308,7 +8309,7 @@ function empCard(e, i) {
       </div>
     </div>` : '')}
     ${(function(){
-      var _pcs=(window._liaProcessos||{})[_cnpj14c]||[];
+      var _pcs=[];
       if(!_pcs.length) return '';
       var _ec={download:'#6366f1',conferencia:'#f59e0b',liberados:'#16a34a'};
       var _el={download:'Download',conferencia:'Conferência',liberados:'Liberados'};
