@@ -1529,7 +1529,7 @@ const ACHIEVEMENTS=[
 // VERSÃO
 // ─────────────────────────────────────────────
 try{var _cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}');if(!_cfg.url||/trycloudflare\.com/.test(_cfg.url)){_cfg.url='https://api.scoutassociados.com';_cfg.usuario=_cfg.usuario||'admin@localhost';localStorage.setItem('jdc_lia_api_cfg',JSON.stringify(_cfg));}}catch(e){} /*APIFIX*/
-  const APP_VERSION = '1.9.18';
+  const APP_VERSION = '1.9.19';
 const APP_BUILD   = '2026-06-17';
 
 // STORAGE HELPERS
@@ -5493,6 +5493,7 @@ function setAdminTab(tab, btn) {
 
 // Histórico de versões mantido pelo desenvolvedor
 const CHANGELOG_ENTRIES = [
+  { ver: '1.9.19', data: '2026-06-22', desc: 'Card (Visibilidade): barra de Apuracao PIS/COFINS subindo pro BigQuery; botao Apuracao liberado (verde) ao chegar a 100%; removido Baixar LIA do card.' },
   { ver: '1.9.18', data: '2026-06-22', desc: 'Botao Apuracao no checklist: abre o relatorio de PIS/COFINS gerado a partir do BigQuery (base oficial x recalculada, por competencia).' },
   { ver: '1.9.17', data: '2026-06-22', desc: 'Botao Download no checklist (ao lado de Limpar tudo): baixa todos os arquivos da empresa em um zip direto no seu PC.' },
   { ver: '1.9.16', data: '2026-06-22', desc: 'Checklist nao lista mais periodos durante o Simples Nacional (ate a data de exclusao) nem anteriores a abertura da empresa.' },
@@ -8311,6 +8312,16 @@ function empCard(e, i) {
         <div style="width:${pct}%;background:${progColor};height:6px;border-radius:99px;transition:.4s"></div>
       </div>
     </div>` : '')}
+    <div data-apur-cnpj="${_cnpj14c}" style="margin-top:1.1rem">
+      <div style="height:1px;background:var(--border);margin:0 0 1.1rem"></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.5rem">
+        <span style="font-size:.74rem;color:var(--text2)">📊 Apuração PIS/COFINS</span>
+        <span class="apur-txt" style="font-size:.8rem;font-weight:700;color:var(--text3)">…</span>
+      </div>
+      <div style="background:var(--border);border-radius:99px;height:6px;overflow:hidden">
+        <div class="apur-bar" style="width:0%;background:#6366f1;height:6px;border-radius:99px;transition:.5s"></div>
+      </div>
+    </div>
     ${(function(){
       var _pcs=[];
       if(!_pcs.length) return '';
@@ -8334,7 +8345,7 @@ function empCard(e, i) {
     })()}
     <div style="display:flex;gap:.5rem;margin-top:1.1rem">
       <button class="btn btn-primary btn-sm" style="flex:1;padding:.55rem;border-radius:10px" onclick="empAbrirChecklist(${i})">📋 Checklist</button>
-      ${getSession().admin ? `<button style="flex:1;background:var(--surface);color:#16a34a;border:1.5px solid #86efac;font-weight:700;font-size:.8rem;padding:.55rem;border-radius:10px;cursor:pointer;white-space:nowrap" onclick="empAbrirLiaSelect(${i})" title="Solicitar download LIA">📥 Baixar LIA</button>` : ''}
+      <button data-apur-btn="${_cnpj14c}" disabled style="flex:1;background:#f1f5f9;color:#94a3b8;border:1.5px solid #e2e8f0;font-weight:700;font-size:.8rem;padding:.55rem;border-radius:10px;cursor:not-allowed;white-space:nowrap" onclick="if(!this.disabled)empAbrirApuracao(${i})" title="Disponível quando a apuração estiver 100%">📊 Apuração</button>
     </div>
   </div>`;
 }
@@ -8671,6 +8682,40 @@ window.empAbrirApuracao = async function(empIdx){
     setTimeout(function(){ URL.revokeObjectURL(url); }, 60000);
   }catch(e){ if(typeof showToast==='function') showToast('Erro: '+e,'#dc2626'); }
 };
+window._apurTok=null; window._apurTokAt=0;
+async function _apurToken(cfg){
+  var now=Date.now();
+  if(window._apurTok && (now-window._apurTokAt)<50000) return window._apurTok;
+  var tk=await fetch(cfg.url+'/api/v1/auth/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'username='+encodeURIComponent(cfg.usuario||'admin@localhost')+'&password='+encodeURIComponent(cfg.senha||'')});
+  var tok=(await tk.json()).access_token; window._apurTok=tok; window._apurTokAt=now; return tok;
+}
+async function liaApurPoll(){
+  var els=document.querySelectorAll('[data-apur-cnpj]');
+  if(!els.length) return;
+  var cfg; try{ cfg=JSON.parse(localStorage.getItem('jdc_lia_api_cfg')||'{}'); }catch(e){ return; }
+  if(!cfg.url) return;
+  var tok; try{ tok=await _apurToken(cfg); }catch(e){ return; }
+  els.forEach(function(el){
+    var cnpj=el.getAttribute('data-apur-cnpj'); if(!cnpj) return;
+    fetch(cfg.url+'/api/v1/pedidos/apuracao-status?cnpj='+cnpj,{headers:{'Authorization':'Bearer '+tok}})
+      .then(function(r){ return r.ok? r.json() : null; })
+      .then(function(j){ if(!j) return;
+        var total=j.total||0, loaded=j.loaded||0, pct=j.pct||0;
+        var pronto=(total>0 && loaded>=total);
+        var col=pronto?'#10b981':(j.processando?'#6366f1':'#f59e0b');
+        var bar=el.querySelector('.apur-bar'), txt=el.querySelector('.apur-txt');
+        if(bar){ bar.style.width=(total?pct:0)+'%'; bar.style.background=col; }
+        if(txt){ txt.textContent= total? (loaded+'/'+total+(pronto?' ✓':(j.processando?' processando…':''))) : 'sem dados'; txt.style.color=col; }
+        var btn=document.querySelector('[data-apur-btn="'+cnpj+'"]');
+        if(btn){
+          if(pronto){ btn.disabled=false; btn.style.cursor='pointer'; btn.style.background='#f5f3ff'; btn.style.color='#7c3aed'; btn.style.borderColor='#7c3aed'; btn.title='Abrir relatório de apuração PIS/COFINS'; }
+          else{ btn.disabled=true; btn.style.cursor='not-allowed'; btn.style.background='#f1f5f9'; btn.style.color='#94a3b8'; btn.style.borderColor='#e2e8f0'; btn.title='Disponível quando a apuração estiver 100%'; }
+        }
+      }).catch(function(){});
+  });
+}
+try{ if(!window._apurPollSet){ window._apurPollSet=1; setInterval(liaApurPoll,5000); setTimeout(liaApurPoll,800); } }catch(e){}
+
 function empToggleCl(empIdx, declId, periodo, field, value) {
   const emps = getEmpresas();
   if (!emps[empIdx]) return;
